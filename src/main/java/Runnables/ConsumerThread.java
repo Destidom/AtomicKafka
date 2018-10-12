@@ -4,7 +4,6 @@ import Serializer.JsonEncoder;
 import consensus.AtomicConsensus;
 import constants.Constants;
 import model.KafkaMessage;
-import model.Type;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -106,11 +105,14 @@ public class ConsumerThread implements Runnable {
                         AtomicConsensus.getInstance().phaseTwo(msg);
                         break;
                     case Decided: // Phase 3, Received all ACK messages needed, start delivery.
+                        AtomicConsensus.getInstance().phaseThree(msg);
                         break;
                     case UniqueAckMessage: // Accept we are the only receiver. Go direct to Delivery
+                        AtomicConsensus.getInstance().phaseFour(msg);
                         break;
                     case Delivery: // Phase 4, Deliver msg to the topics.
                         // (maybe not needed, need to read commit the delivered message though)
+                        AtomicConsensus.getInstance().phaseFour(msg);
                         break;
                     case NackMessage: // Node disagree with decision, restart.
                         // (not needed for now)
@@ -136,16 +138,16 @@ public class ConsumerThread implements Runnable {
             // Consensus algorithm here.
 
             // Receive message from consensus here.
-            String[] topics = this.topic.stream().toArray(String[]::new);
+            /*String[] topics = this.topic.stream().toArray(String[]::new);
             KafkaMessage msg = new KafkaMessage(1, this.producer.getID(), Type.AckMessage, "Responding",
-                    topics);
+                    topics);*/
 
             // Send Messages from consensus algorithm to the respective topics.
-            if (this.topic.contains("T1")) {
+            /*if (this.topic.contains("T1")) {
                 this.producer.sendMessage(msg, "T2");
             } else {
                 this.producer.sendMessage(msg, "T1");
-            }
+            }*/
 
         }
 

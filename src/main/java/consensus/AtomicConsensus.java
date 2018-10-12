@@ -40,6 +40,14 @@ public class AtomicConsensus {
     public KafkaMessage phaseOne(KafkaMessage msg) {
         // Check message is designated to only one topic or more, if more notify others.
         // Send Unique Ack if only to us to log delivery.
+
+        // Two possible message types, ClientMessage (as the first message we received, or notify message
+        // Both messages means the same, but comes from different origins.
+        // And if a Node has not received a clientmessage, it will receive a notify message and treat it the same way.
+
+        // When the final # of notify messages has arrived, send out an ACK message, which means we enter phase 2.
+        // Single map for each phase ?
+
         return null;
     }
 
