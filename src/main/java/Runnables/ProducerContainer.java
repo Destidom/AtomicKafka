@@ -11,6 +11,7 @@ import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.serialization.LongSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
+import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
@@ -109,6 +110,13 @@ public class ProducerContainer {
         }
     }
 
+
+    public synchronized void sendMessage(KafkaMessage msg, List<String> topics) {
+
+        String[] localTmp = topics.toArray(new String[topics.size()]);
+        sendMessage(msg, localTmp);
+    }
+
     /**
      * Send single KafkaMessage to multiple topics with transaction.
      *
@@ -151,13 +159,13 @@ public class ProducerContainer {
     }
 
 
-    /**
+    /*
      * Multiple messages to single Topic
      *
      * @param msg
      * @param topic
      */
-    public synchronized void sendMessage(KafkaMessage[] msg, String topic) {
+    /*public synchronized void sendMessage(KafkaMessage[] msg, String topic) {
         if (producer != null) {
             // Encode message
             JsonEncoder json = new JsonEncoder();
@@ -190,8 +198,7 @@ public class ProducerContainer {
         } else {
             System.out.println("ProducerContainer is not initialized for producer " + this.ID);
         }
-    }
-
+    }*/
     public void stop() {
         this.producer.close();
     }

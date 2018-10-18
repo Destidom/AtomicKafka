@@ -94,6 +94,8 @@ public class KafkaMessage implements Serializable {
         this.timeStamp = timeStamp;
     }
 
+    // TODO: Implement Equals, hashcode methods for comparison.
+
     @Override
     public String toString() {
         return "KafkaMessage {" +

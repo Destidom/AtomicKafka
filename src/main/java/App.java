@@ -32,8 +32,9 @@ import java.util.Scanner;
 //          - Can check for latest offset of other nodes and our node, and do some magic?
 
 /*
-  {"messageID":2,"clientID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1","T2"]}
-  {"messageID":2,"clientID":1,"messageType":"NotifyMessage","value":"Hello","topic":["T1","T2"]}
+  {"messageID":1,"clientID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1","T2"]}
+  {"messageID":1,"clientID":2,"messageType":"NotifyMessage","value":"Hello","topic":["T1","T2"]}
+
 */
 
 

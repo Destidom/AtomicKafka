@@ -53,6 +53,15 @@ public class ConsumerThread implements Runnable {
     }
 
 
+    /**
+     * Dependency Injection for testing later on.
+     *
+     * @param consumer
+     */
+    public void setConsumer(Consumer<Long, String> consumer) {
+        this.consumer = consumer;
+    }
+
     public void createConsumer() {
         Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, Constants.KAFKA_BROKERS);
@@ -95,37 +104,47 @@ public class ConsumerThread implements Runnable {
                 System.out.println("Read Record TimeStampType " + record.timestampType());*/
                 if (record.value() != null) {
                     KafkaMessage msg = json.decode(record.value());
-                    System.out.println("We got message " + msg);
-                    switch (msg.getMessageType()) {
-                        case ClientMessage: // Phase one, send out and receive notifications of msgs
-                            KafkaMessage toSend = AtomicConsensus.getInstance().phaseOne(msg);
-                            ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
-                            break;
-                        case NotifyMessage: //Phase one, receive Notify messages.
-                            AtomicConsensus.getInstance().phaseOne(msg);
-                            break;
-                        case AckMessage: // Phase 2, received all Notification msgs send out Accept.
-                            AtomicConsensus.getInstance().phaseTwo(msg);
-                            break;
-                        case Decided: // Phase 3, Received all ACK messages needed, start delivery.
-                            AtomicConsensus.getInstance().phaseThree(msg);
-                            break;
-                        case UniqueAckMessage: // Accept we are the only receiver. Go direct to Delivery
-                            AtomicConsensus.getInstance().phaseFour(msg);
-                            break;
-                        case Delivery: // Phase 4, Deliver msg to the topics.
-                            // (maybe not needed, need to read commit the delivered message though)
-                            AtomicConsensus.getInstance().phaseFour(msg);
-                            break;
-                        case NackMessage: // Node disagree with decision, restart.
-                            // (not needed for now)
-                            break;
-                        case DupMessage: // Already got this message (used if a Node tries to take responsibility over another topic)
-                            // (not needed for now)
-                            break;
-                        default:
-                            System.out.println("Something wrong happend in ConsumerThread Switch");
+                    if (msg != null) {
+                        System.out.println("We got message " + msg);
+                        KafkaMessage toSend = null;
+                        switch (msg.getMessageType()) {
+                            case ClientMessage: // Phase one, send out and receive notifications of msgs
+                                toSend = AtomicConsensus.getInstance().phaseOne(msg);
+                                // Sending ack to ourselves.
+                                ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
+                                break;
+                            case NotifyMessage: //Phase one, receive Notify messages.
+                                toSend = AtomicConsensus.getInstance().phaseOne(msg);
+                                ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
+                                break;
+                            case AckMessage: // Phase 2, received all Notification msgs send out Accept.
+                                toSend = AtomicConsensus.getInstance().phaseTwo(msg);
+                                if (toSend != null) {
+                                    ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
+                                }
+                                break;
+                            case Decided: // Phase 3, Received all ACK messages needed, start delivery.
+                                AtomicConsensus.getInstance().phaseThree(msg);
+                                break;
+                            case UniqueAckMessage: // Accept we are the only receiver. Go direct to Delivery
+                                AtomicConsensus.getInstance().phaseFour(msg);
+                                break;
+                            case Delivery: // Phase 4, Deliver msg to the topics.
+                                // TODO: (maybe not needed, need to read commit the delivered message though)
+                                // Ignore this, as we do not care about delivered messages, they are already TOD.
+                                break;
+                            case NackMessage: // Node disagree with decision, restart(?).
+                                // (not needed for now)
+                                break;
+                            case DupMessage: // Already got this message (used if a Node tries to take responsibility over another topic)
+                                // (not needed for now)
+                                break;
+                            default:
+                                System.out.println("Something wrong happend in ConsumerThread Switch");
 
+                        }
+                    } else {
+                        System.out.println("Decoded msg is null " + msg);
                     }
 
                 } else {
@@ -141,23 +160,7 @@ public class ConsumerThread implements Runnable {
             //  - Only reason I can think of is if we handle multiple messages at once.
             consumer.commitAsync();
 
-
-            // Consensus algorithm here.
-
-            // Receive message from consensus here.
-            /*String[] topics = this.topic.stream().toArray(String[]::new);
-            KafkaMessage msg = new KafkaMessage(1, this.producer.getID(), Type.AckMessage, "Responding",
-                    topics);*/
-
-            // Send Messages from consensus algorithm to the respective topics.
-            /*if (this.topic.contains("T1")) {
-                this.producer.sendMessage(msg, "T2");
-            } else {
-                this.producer.sendMessage(msg, "T1");
-            }*/
-
         }
-
         System.out.println("Polls without messages: " + noMessageFound);
 
         // Shutting down the atomic Node.

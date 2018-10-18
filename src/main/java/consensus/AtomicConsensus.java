@@ -4,7 +4,9 @@ import model.KafkaMessage;
 import model.Type;
 import org.apache.commons.lang3.SerializationUtils;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -12,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * The consensus will be based on latest TS of a ClientMessage or NodeNotify Message.
  * Will keep the state of a specific message strain.
  */
-public class AtomicConsensus {
+public class AtomicConsensus implements Consensus {
 
     // Map is as follows
     // (Integer, HashMap)      MessageID -> MAP.
@@ -43,6 +45,14 @@ public class AtomicConsensus {
         - What if messageID is not unique ?
      */
 
+    /**
+     * Phase One is the content based multicast phase.
+     * Ensuring all intended Topic receive the Message.
+     *
+     * @param msg
+     * @return
+     */
+    @Override
     public KafkaMessage phaseOne(KafkaMessage msg) {
         // Check message is designated to only one topic or more, if more notify others.
         // Send Unique Ack if only to us to log delivery.
@@ -58,9 +68,10 @@ public class AtomicConsensus {
         // If only one topic, skip phases and storing message and send it directly to kafka.
         if (msg.getTopic().length == 1) {
             // Send message directly to phase 4.
-            msg.setMessageType(Type.Decided);
+            msg.setMessageType(Type.UniqueAckMessage);
             return msg;
         }
+
         ConcurrentHashMap<Integer, KafkaMessage> list = state.get(msg.getMessageID());
         if (list == null) {
             System.out.println("Init list");
@@ -73,19 +84,23 @@ public class AtomicConsensus {
         }
 
 
-        // Create response message.
+        // Create response message. (Notify to ourselves, TODO: Remove self sending to notify)
         KafkaMessage cloned = SerializationUtils.clone(msg);
-        cloned.setMessageType(Type.AckMessage);
 
-        // Test
-        /*synchronized (state) {
-            state.get(cloned.getMessageID()).forEach(e -> System.out.println("test " + e.toString()));
-            // Add message to state array
-        }*/
+        if (msg.getMessageType() == Type.NotifyMessage) {
+            // Respond to other nodes that we have gotten the message from client.
+            cloned.setMessageType(Type.AckMessage);
+        } else {
+            // Notify others that there are a new message TODO: Redo logic to be reactive instead of proactive.
+            cloned.setMessageType(Type.NotifyMessage);
+        }
 
         return cloned;
     }
 
+    // Wait for a last ack, if no ack received send notify.
+    // If no received ack from that notify assume responsibility of the topic (?)
+    @Override
     public KafkaMessage phaseTwo(KafkaMessage msg) {
         // Check if message has achieved phase2, meaning every node has received the msg.
         // If we enter phase 2, submit a new message with our timestamp and offset
@@ -106,38 +121,54 @@ public class AtomicConsensus {
 
         // Check if we have enough ACKS to step into next phase.
         boolean allAcks = true;
-        int counter = 0;
+
+        Set<Integer> haveTopicResponses = new HashSet<>();
         for (Map.Entry<Integer, KafkaMessage> entry : this.state.get(msg.getMessageID()).entrySet()) {
             if (entry.getValue().getMessageType() != Type.AckMessage) {
                 allAcks = false;
-                ++counter;
+            } else {
+                // Store unique senders.
+                // TODO: Create correlation between SenderID and Topic somehow.
+                haveTopicResponses.add(entry.getValue().getSenderID());
             }
         }
 
         // TODO: Improve this section to handle the specific topics and number of acks.
-        if (allAcks && counter == messageMap.mappingCount() && counter == storedMessage.getTopic().length) {
-            // Check if we have enough acks.
+        // TODO: Find out which offset/timestamp is the latest and send it to others.
+        if (allAcks && haveTopicResponses.size() == storedMessage.getTopic().length) {
+            // Check if we have enough Acks.
             System.out.println("We got all acks now!");
+            // Create response message. (Notify to ourselves, TODO: Remove self sending to notify)
+            KafkaMessage cloned = SerializationUtils.clone(msg);
+            cloned.setMessageType(Type.Decided);
+            return cloned;
         } else {
-            // wait for retrieving all acks.
-            System.out.println("We await for    all acks now!");
+            // wait for retrieving all Acks.
+            System.out.println("We await for all acks now!");
         }
 
 
         return null;
     }
 
+    @Override
     public KafkaMessage phaseThree(KafkaMessage msg) {
         // Check if we have achieved phase3, meaning every node has recieved the TS and offset.
         // Send a decision message to every node.
         System.out.println("In phase three with " + msg.toString());
+        // TODO: Decide on a message and send decided msg out.
+        // TODO: Based on Timestamp, offset, they "should" never end up being the same as another message
         return null;
     }
 
+    @Override
     public KafkaMessage phaseFour(KafkaMessage msg) {
         // If decision node is received from everybody. Deliver it to the deliver topic(?)
-        // Delete it from hashmap.
+        // Delete it from HashMap.
         System.out.println("In phase four with " + msg.toString());
+        // TODO: Find out how to deliver, same Topic or a dedicated Topic for delivered messages?
+        // TODO: Pros with dedicated: less scann of topic to find delivered messages, easier to test.
+        // TODO: Con with dedicated: requires more of a client.
         return null;
     }
 
