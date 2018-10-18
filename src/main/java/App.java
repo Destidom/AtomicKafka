@@ -31,6 +31,11 @@ import java.util.Scanner;
 //      - This can be fixed by replaying (not committing) any messages, but how do we do with the other nodes? msg them?
 //          - Can check for latest offset of other nodes and our node, and do some magic?
 
+/*
+  {"messageID":2,"clientID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1","T2"]}
+  {"messageID":2,"clientID":1,"messageType":"NotifyMessage","value":"Hello","topic":["T1","T2"]}
+*/
+
 
 /*
  * If a node crashes, maybe another node can spawn a new process, or take over the responability of the crashed node.

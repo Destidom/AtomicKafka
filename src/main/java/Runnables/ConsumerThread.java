@@ -93,38 +93,45 @@ public class ConsumerThread implements Runnable {
                 System.out.println("Read Record headers " + record.headers());
                 System.out.println("Read Record TimeStamp " + record.timestamp());
                 System.out.println("Read Record TimeStampType " + record.timestampType());*/
-                KafkaMessage msg = json.decode(record.value());
-                switch (msg.getMessageType()) {
-                    case ClientMessage: // Phase one, send out and receive notifications of msgs
-                        AtomicConsensus.getInstance().phaseOne(msg);
-                        break;
-                    case NotifyMessage: //Phase one, receive Notify messages.
-                        AtomicConsensus.getInstance().phaseOne(msg);
-                        break;
-                    case AckMessage: // Phase 2, received all Notification msgs send out Accept.
-                        AtomicConsensus.getInstance().phaseTwo(msg);
-                        break;
-                    case Decided: // Phase 3, Received all ACK messages needed, start delivery.
-                        AtomicConsensus.getInstance().phaseThree(msg);
-                        break;
-                    case UniqueAckMessage: // Accept we are the only receiver. Go direct to Delivery
-                        AtomicConsensus.getInstance().phaseFour(msg);
-                        break;
-                    case Delivery: // Phase 4, Deliver msg to the topics.
-                        // (maybe not needed, need to read commit the delivered message though)
-                        AtomicConsensus.getInstance().phaseFour(msg);
-                        break;
-                    case NackMessage: // Node disagree with decision, restart.
-                        // (not needed for now)
-                        break;
-                    case DupMessage: // Already got this message (used if a Node tries to take responsibility over another topic)
-                        // (not needed for now)
-                        break;
-                    default:
-                        System.out.println("Something wrong happend in ConsumerThread Switch");
+                if (record.value() != null) {
+                    KafkaMessage msg = json.decode(record.value());
+                    System.out.println("We got message " + msg);
+                    switch (msg.getMessageType()) {
+                        case ClientMessage: // Phase one, send out and receive notifications of msgs
+                            KafkaMessage toSend = AtomicConsensus.getInstance().phaseOne(msg);
+                            ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
+                            break;
+                        case NotifyMessage: //Phase one, receive Notify messages.
+                            AtomicConsensus.getInstance().phaseOne(msg);
+                            break;
+                        case AckMessage: // Phase 2, received all Notification msgs send out Accept.
+                            AtomicConsensus.getInstance().phaseTwo(msg);
+                            break;
+                        case Decided: // Phase 3, Received all ACK messages needed, start delivery.
+                            AtomicConsensus.getInstance().phaseThree(msg);
+                            break;
+                        case UniqueAckMessage: // Accept we are the only receiver. Go direct to Delivery
+                            AtomicConsensus.getInstance().phaseFour(msg);
+                            break;
+                        case Delivery: // Phase 4, Deliver msg to the topics.
+                            // (maybe not needed, need to read commit the delivered message though)
+                            AtomicConsensus.getInstance().phaseFour(msg);
+                            break;
+                        case NackMessage: // Node disagree with decision, restart.
+                            // (not needed for now)
+                            break;
+                        case DupMessage: // Already got this message (used if a Node tries to take responsibility over another topic)
+                            // (not needed for now)
+                            break;
+                        default:
+                            System.out.println("Something wrong happend in ConsumerThread Switch");
 
+                    }
+
+                } else {
+                    System.out.println("No message in value");
                 }
-                System.out.println("We got message " + msg);
+
             });
 
 

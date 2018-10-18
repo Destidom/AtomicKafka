@@ -1,9 +1,11 @@
 package model;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
-public class KafkaMessage {
+public class KafkaMessage implements Serializable {
 
+    private static final long serialVersionUID = 6024531281280351055L;
     private int messageID;
     private int clientID;
     private Type messageType;
