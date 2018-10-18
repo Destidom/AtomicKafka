@@ -1,7 +1,7 @@
 package Runnables;
 
 import Serializer.JsonEncoder;
-import consensus.AtomicConsensus;
+import consensus.AtomicMulticast;
 import constants.Constants;
 import model.KafkaMessage;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -109,29 +109,28 @@ public class ConsumerThread implements Runnable {
                         KafkaMessage toSend = null;
                         switch (msg.getMessageType()) {
                             case ClientMessage: // Phase one, send out and receive notifications of msgs
-                                toSend = AtomicConsensus.getInstance().phaseOne(msg);
+                                toSend = AtomicMulticast.getInstance().phaseOne(msg);
                                 // Sending ack to ourselves.
                                 ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
                                 break;
                             case NotifyMessage: //Phase one, receive Notify messages.
-                                toSend = AtomicConsensus.getInstance().phaseOne(msg);
+                                toSend = AtomicMulticast.getInstance().phaseOne(msg);
                                 ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
                                 break;
                             case AckMessage: // Phase 2, received all Notification msgs send out Accept.
-                                toSend = AtomicConsensus.getInstance().phaseTwo(msg);
+                                toSend = AtomicMulticast.getInstance().phaseTwo(msg);
                                 if (toSend != null) {
                                     ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
                                 }
                                 break;
                             case Decided: // Phase 3, Received all ACK messages needed, start delivery.
-                                AtomicConsensus.getInstance().phaseThree(msg);
+                                AtomicMulticast.getInstance().phaseThree(msg);
                                 break;
                             case UniqueAckMessage: // Accept we are the only receiver. Go direct to Delivery
-                                AtomicConsensus.getInstance().phaseFour(msg);
+                                AtomicMulticast.getInstance().phaseFour(msg);
                                 break;
                             case Delivery: // Phase 4, Deliver msg to the topics.
-                                // TODO: (maybe not needed, need to read commit the delivered message though)
-                                // Ignore this, as we do not care about delivered messages, they are already TOD.
+                                // TODO: Only deliver to topics the node is responsible for.
                                 break;
                             case NackMessage: // Node disagree with decision, restart(?).
                                 // (not needed for now)

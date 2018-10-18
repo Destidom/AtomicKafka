@@ -2,7 +2,7 @@ package consensus;
 
 import model.KafkaMessage;
 
-public interface Consensus {
+public interface Atomic {
 
     KafkaMessage phaseOne(KafkaMessage msg);
 

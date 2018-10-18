@@ -14,27 +14,27 @@ import java.util.concurrent.ConcurrentHashMap;
  * The consensus will be based on latest TS of a ClientMessage or NodeNotify Message.
  * Will keep the state of a specific message strain.
  */
-public class AtomicConsensus implements Consensus {
+public class AtomicMulticast implements Atomic {
 
     // Map is as follows
     // (Integer, HashMap)      MessageID -> MAP.
     // (Integer, KafkaMessage) ClientID -> KafkaMessage.
     private final ConcurrentHashMap<Integer, ConcurrentHashMap<Integer, KafkaMessage>> state = new ConcurrentHashMap<>();
 
-    public static AtomicConsensus instance;
+    public static AtomicMulticast instance;
 
-    public static AtomicConsensus getInstance() {
+    public static AtomicMulticast getInstance() {
         if (instance == null) {
-            synchronized (AtomicConsensus.class) {
+            synchronized (AtomicMulticast.class) {
                 if (instance == null) {
-                    instance = new AtomicConsensus();
+                    instance = new AtomicMulticast();
                 }
             }
         }
         return instance;
     }
 
-    private AtomicConsensus() {
+    private AtomicMulticast() {
 
     }
 

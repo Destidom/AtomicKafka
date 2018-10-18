@@ -6,7 +6,7 @@ public enum Type {
     DupMessage, // Already received this message before!
     AckMessage, // Acknowledge we have recieved the message?
     UniqueAckMessage, // We are the only receiver to send to delivery right away.
-    NackMessage, // Consensus has not been achieved by this node yet.
+    NackMessage, // Atomic has not been achieved by this node yet.
     Decided, // This node has decided on the message with TS x.
     Delivery, // The consensus is on this message.
 
