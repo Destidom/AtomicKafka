@@ -28,7 +28,7 @@ public class ConsumerThread implements Runnable {
     private String groupID = "";
     public static int CLIENT_ID = -1;
 
-    private Duration pollDuriation = Duration.ofSeconds(3);
+    private Duration pollDuriation = Duration.ofSeconds(10);
 
     public ConsumerThread() {
         this.topic.add("default");
@@ -97,13 +97,6 @@ public class ConsumerThread implements Runnable {
 
             //print each record.
             consumerRecords.forEach(record -> {
-                /*System.out.println("Read Record Key " + record.key());
-                System.out.println("Read Record value " + record.value());
-                System.out.println("Read Record partition " + record.partition());
-                System.out.println("Read Record offset " + record.offset());
-                System.out.println("Read Record headers " + record.headers());
-                System.out.println("Read Record TimeStamp " + record.timestamp());
-                System.out.println("Read Record TimeStampType " + record.timestampType());*/
                 if (record.value() != null) {
                     KafkaMessage msg = json.decode(record.value());
                     if (msg != null) { // set offset and timestamp for first time message.
@@ -138,10 +131,13 @@ public class ConsumerThread implements Runnable {
                                 }
                                 break;
                             case UniqueAckMessage: // Accept we are the only receiver. Go direct to Delivery
-                                AtomicMulticast.getInstance().phaseFour(msg);
+                                toSend = AtomicMulticast.getInstance().phaseFour(msg);
+                                if (toSend != null) {
+                                    ProducerContainer.getInstance().sendMessage(toSend, this.topic);
+                                }
                                 break;
                             case Delivery: // Phase 4, Deliver msg to the topics.
-                                // TODO: Only deliver to topics the node is responsible for.
+                                System.out.println("Successfully delivered " + msg);
                                 break;
                             case NackMessage: // Node disagree with decision, restart(?).
                                 // (not needed for now)
@@ -178,3 +174,11 @@ public class ConsumerThread implements Runnable {
         consumer.close();
     }
 }
+
+ /*System.out.println("Read Record Key " + record.key());
+                System.out.println("Read Record value " + record.value());
+                System.out.println("Read Record partition " + record.partition());
+                System.out.println("Read Record offset " + record.offset());
+                System.out.println("Read Record headers " + record.headers());
+                System.out.println("Read Record TimeStamp " + record.timestamp());
+                System.out.println("Read Record TimeStampType " + record.timestampType());*/

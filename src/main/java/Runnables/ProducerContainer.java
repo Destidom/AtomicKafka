@@ -25,11 +25,11 @@ import java.util.concurrent.ExecutionException;
  * for production; for development you can change this, by adjusting broker setting
  * `transaction.state.log.replication.factor`.";
  */
-public class ProducerContainer {
+public class ProducerContainer implements IProducer {
 
     private org.apache.kafka.clients.producer.Producer<Long, String> producer = null;
     private int ID = -1;
-    private String transactionalID = "default" + Integer.toString(new Random().nextInt());
+    private String transactionalID = "default" + Integer.toString(new Random().nextInt()); // TODO: fix
 
     public static ProducerContainer instance;
 
@@ -45,7 +45,7 @@ public class ProducerContainer {
     }
 
     public ProducerContainer() {
-        createProducer();
+        createProducer(null);
         this.producer.initTransactions(); //initiate transactions
         instance = this;
     }
@@ -53,14 +53,25 @@ public class ProducerContainer {
     public ProducerContainer(int clientID, String transactionID) {
         this.ID = clientID;
         this.transactionalID = transactionID;
-        createProducer();
+        createProducer(null);
+        this.producer.initTransactions(); //initiate transactions
+        instance = this;
+    }
+
+    public ProducerContainer(int clientID, String transactionID, Properties props) {
+        this.ID = clientID;
+        this.transactionalID = transactionID;
+        createProducer(props);
         this.producer.initTransactions(); //initiate transactions
         instance = this;
     }
 
 
-    private void createProducer() {
-        Properties props = new Properties();
+    private void createProducer(Properties props) {
+        if (props == null) {
+            props = new Properties();
+        }
+
         //props.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, CustomPartitioner.class.getName());
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, Constants.KAFKA_BROKERS);
         props.put(ProducerConfig.CLIENT_ID_CONFIG, Integer.toString(this.ID));
@@ -76,6 +87,7 @@ public class ProducerContainer {
     }
 
 
+    @Override
     public synchronized void sendMessage(KafkaMessage msg, String topic) {
         if (producer != null) {
             // Encode message
@@ -111,6 +123,7 @@ public class ProducerContainer {
     }
 
 
+    @Override
     public synchronized void sendMessage(KafkaMessage msg, List<String> topics) {
 
         String[] localTmp = topics.toArray(new String[topics.size()]);
@@ -199,6 +212,7 @@ public class ProducerContainer {
             System.out.println("ProducerContainer is not initialized for producer " + this.ID);
         }
     }*/
+    @Override
     public void stop() {
         this.producer.close();
     }

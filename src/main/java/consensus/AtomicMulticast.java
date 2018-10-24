@@ -11,6 +11,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+
+// TODO: Verification of delivered messages?
+// TODO: Find out how to deliver, same Topic or a dedicated Topic for delivered messages?
+// TODO: Pros with dedicated: less scann of topic to find delivered messages, easier to test.
+// TODO: Con with dedicated: requires more of a client.
+
+
 /**
  * This class will decided which message type to send to the other topics.
  * The consensus will be based on latest TS of a ClientMessage or NodeNotify Message.
@@ -65,14 +72,16 @@ public class AtomicMulticast implements Atomic {
 
         // Dont care about numbers of messages here, just build the array and store messages.
 
-        System.out.println("In phase one with " + msg.toString());
 
         // If only one topic, skip phases and storing message and send it directly to kafka.
         if (msg.getTopic().length == 1) {
+            System.out.println("Unique msg " + msg.toString());
             // Send message directly to phase 4.
             msg.setMessageType(Type.UniqueAckMessage);
             return msg;
         }
+
+        System.out.println("In phase one with " + msg.toString());
 
         ConcurrentHashMap<Integer, KafkaMessage> list = state.get(msg.getMessageID());
         if (list == null) {
@@ -87,12 +96,11 @@ public class AtomicMulticast implements Atomic {
         }
 
 
-        // Create response message. (Notify to ourselves, TODO: Remove self sending to notify)
+        // Create response message.
         KafkaMessage cloned = SerializationUtils.clone(msg);
-        cloned.setSenderID(ConsumerThread.CLIENT_ID);
+        cloned.setSenderID(ConsumerThread.CLIENT_ID); // Set ourselves as sender.
         if (msg.getMessageType() == Type.NotifyMessage) {
             // Respond to other nodes that we have gotten the message from client.
-            // TODO: Make sure that we dont send ACK on behalf of other nodes!
             cloned.setMessageType(Type.AckMessage);
         } else {
             // Notify others that there are a new message TODO: Redo logic to be reactive instead of proactive.
@@ -150,11 +158,10 @@ public class AtomicMulticast implements Atomic {
             while (it.hasNext()) {
                 Map.Entry<Integer, KafkaMessage> pair = (Map.Entry) it.next();
                 KafkaMessage tmpMsg = pair.getValue();
-                if (lastestOffset < tmpMsg.getOffset() && lastestTimeStamp < tmpMsg.getTimeStamp()) {
+                if (lastestOffset < tmpMsg.getOffset() && lastestTimeStamp < tmpMsg.getTimeStamp()) { // TODO: Fix this..
                     lastestOffset = tmpMsg.getOffset();
                     lastestTimeStamp = tmpMsg.getTimeStamp();
                     decidedMessage = tmpMsg;
-                    System.out.println(pair.getKey() + " = " + pair.getValue());
                 }
             }
 
@@ -165,7 +172,7 @@ public class AtomicMulticast implements Atomic {
             return cloned;
         } else {
             // wait for retrieving all Acks.
-            System.out.println("We await for all acks now!");
+            System.out.println("We await for ACKS now!");
         }
 
 
@@ -192,7 +199,6 @@ public class AtomicMulticast implements Atomic {
                     && entry.getValue().getTimeStamp() != matchTimeStamp
                     && entry.getValue().getOffset() != matchOffset) {
                 allDecided = false;
-                System.out.println("BBBBBBBBBBBB " + entry.getValue());
             } else {
                 // Store unique senders.
                 // TODO: Create correlation between SenderID and Topic somehow.?
@@ -207,6 +213,7 @@ public class AtomicMulticast implements Atomic {
             cloned.setMessageType(Type.Delivery);
             // TODO: When delivered, clear out the delivered messages from state.
             System.out.println("Delivering " + cloned);
+            this.state.remove(msg.getMessageID());
             return cloned;
         } else {
             System.out.println("Waiting for decided values!");
@@ -217,15 +224,12 @@ public class AtomicMulticast implements Atomic {
 
     @Override
     public KafkaMessage phaseFour(KafkaMessage msg) {
-        // If decision node is received from everybody. Deliver it to the deliver topic(?)
-        // Delete it from HashMap.
         System.out.println("In phase four with " + msg.toString());
-        // TODO: Verification of delivered messages?
+        KafkaMessage cloned = SerializationUtils.clone(msg);
+        cloned.setSenderID(ConsumerThread.CLIENT_ID);
+        cloned.setMessageType(Type.Delivery);
 
-        // TODO: Find out how to deliver, same Topic or a dedicated Topic for delivered messages?
-        // TODO: Pros with dedicated: less scann of topic to find delivered messages, easier to test.
-        // TODO: Con with dedicated: requires more of a client.
-        return null;
+        return cloned;
     }
 
     public void removeMessage(KafkaMessage msg) {

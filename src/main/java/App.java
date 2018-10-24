@@ -6,9 +6,14 @@ import constants.Args;
 
 import java.util.Scanner;
 
-// Typical message to send, remember to increase the MessageID
-// {"messageID":1,"senderID":1,"messageType":"CLIENT","value":"this is a test","topic":["test","mest"]}
-// {"messageID":1,"clientID":1,"messageType":"CLIENT","value":"Hello","topic":["T1","T2"]}
+/*
+   Typical message to send, remember to increase the MessageID
+  {"messageID":3,"clientID":1,"messageType":"ClientMessage","value":"Hello Soup","topic":["T1"]}
+  {"messageID":1,"clientID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1","T2"]}
+  {"messageID":2,"clientID":2,"messageType":"ClientMessage","value":"Hello World","topic":["T1","T2","T3"]}
+
+*/
+
 
 // Command to run jar
 // java -jar 0.jar -Topic T1 -TransactionID 1 -GroupID 1 -ID 1
@@ -21,28 +26,13 @@ import java.util.Scanner;
 // until a client tells them about it, after they have agreed on the message the
 // "AtomicNode" forgets about that topic, as the topic-relation only lives inside the message.
 
-// I think we need four stages for agreeing on total order.
-// 1. Receive from client
-// 2. Send to other topics in the list
-// 3. Agree on the highest timestamp.
-// 4. Deliver the message.
-
-// I dont think we need to rebuild any state, as if a AtomicNode has crashed and or died, it wont accept any value
-// The only reason to rebuild something might be because of a crash on delivery.
-//      - This can be fixed by replaying (not committing) any messages, but how do we do with the other nodes? msg them?
-//          - Can check for latest offset of other nodes and our node, and do some magic?
+// I think we need three stages for agreeing on total order.
+// 1. Receive from client, notify others
+// 2. Receive acks, decide on an ACK message.
+// 3. Receive Decided, when all decided messages #ofTopics is received, send delivery.
 
 /*
-  {"messageID":1,"clientID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1","T2"]}
-  {"messageID":1,"clientID":2,"messageType":"NotifyMessage","value":"Hello","topic":["T1","T2"]}
-
-  {"messageID":1,"clientID":2,"messageType":"AckMessage","value":"Hello","topic":["T1","T2"]}
-
-*/
-
-
-/*
- * If a node crashes, maybe another node can spawn a new process, or take over the responability of the crashed node.
+ * If a node crashes, maybe another node can spawn a new process, or take over the responsibility of the crashed node.
  * */
 
 public class App {
