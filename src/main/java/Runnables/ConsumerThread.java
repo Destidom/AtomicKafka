@@ -26,6 +26,7 @@ public class ConsumerThread implements Runnable {
     private boolean running = true;
     private ProducerContainer producer = null;
     private String groupID = "";
+    public static int CLIENT_ID = -1;
 
     private Duration pollDuriation = Duration.ofSeconds(3);
 
@@ -45,10 +46,11 @@ public class ConsumerThread implements Runnable {
         createConsumer();
     }
 
-    public ConsumerThread(ProducerContainer producer, String topic, String groupID) {
+    public ConsumerThread(ProducerContainer producer, String topic, String groupID, Integer clientID) {
         this.producer = producer;
         this.topic.add(topic);
         this.groupID = groupID;
+        this.CLIENT_ID = clientID;
         createConsumer();
     }
 
@@ -104,27 +106,36 @@ public class ConsumerThread implements Runnable {
                 System.out.println("Read Record TimeStampType " + record.timestampType());*/
                 if (record.value() != null) {
                     KafkaMessage msg = json.decode(record.value());
-                    if (msg != null) {
+                    if (msg != null) { // set offset and timestamp for first time message.
                         System.out.println("We got message " + msg);
                         KafkaMessage toSend = null;
                         switch (msg.getMessageType()) {
                             case ClientMessage: // Phase one, send out and receive notifications of msgs
+                                msg.setOffset(record.offset()); // Set offset for clientMessage since Phase I
+                                msg.setTimeStamp(record.timestamp()); // Set Timestamp for clientMessage since Phase I
                                 toSend = AtomicMulticast.getInstance().phaseOne(msg);
                                 // Sending ack to ourselves.
                                 ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
                                 break;
                             case NotifyMessage: //Phase one, receive Notify messages.
+                                msg.setOffset(record.offset());
+                                msg.setTimeStamp(record.timestamp());
                                 toSend = AtomicMulticast.getInstance().phaseOne(msg);
-                                ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
+                                // This one should only send ACK to ourselves.
+                                if (toSend.getSenderID() == this.CLIENT_ID)
+                                    ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
                                 break;
-                            case AckMessage: // Phase 2, received all Notification msgs send out Accept.
+                            case AckMessage: // Phase 2, received all ACKS msgs decide on a message.
                                 toSend = AtomicMulticast.getInstance().phaseTwo(msg);
                                 if (toSend != null) {
                                     ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
                                 }
                                 break;
-                            case Decided: // Phase 3, Received all ACK messages needed, start delivery.
-                                AtomicMulticast.getInstance().phaseThree(msg);
+                            case Decided: // Phase 3, Received all Decided messages needed, start delivery.
+                                toSend = AtomicMulticast.getInstance().phaseThree(msg);
+                                if (toSend != null) {
+                                    ProducerContainer.getInstance().sendMessage(toSend, this.topic);
+                                }
                                 break;
                             case UniqueAckMessage: // Accept we are the only receiver. Go direct to Delivery
                                 AtomicMulticast.getInstance().phaseFour(msg);

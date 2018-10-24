@@ -7,7 +7,7 @@ public class KafkaMessage implements Serializable {
 
     private static final long serialVersionUID = 6024531281280351055L;
     private int messageID;
-    private int clientID;
+    private int senderID;
     private Type messageType;
     private String value;
     private String[] topic;
@@ -19,18 +19,22 @@ public class KafkaMessage implements Serializable {
     public KafkaMessage() {
         this.messageID = -1;
         this.messageType = null;
-        this.clientID = -1;
+        this.senderID = -1;
         this.value = "";
         this.topic = new String[]{"default"};
+        this.offset = -999L;
+        this.timeStamp = -999L;
     }
 
 
     public KafkaMessage(int mID, int cID, Type mType, String value, String[] topic) {
         this.messageID = mID;
         this.messageType = mType;
-        this.clientID = cID;
+        this.senderID = cID;
         this.value = value;
         this.topic = topic;
+        this.offset = -999L;
+        this.timeStamp = -999L;
     }
 
     public int getMessageID() {
@@ -42,11 +46,11 @@ public class KafkaMessage implements Serializable {
     }
 
     public int getSenderID() {
-        return clientID;
+        return senderID;
     }
 
-    public void setClientID(int clientID) {
-        this.clientID = clientID;
+    public void setSenderID(int senderID) {
+        this.senderID = senderID;
     }
 
     public Type getMessageType() {
@@ -63,11 +67,6 @@ public class KafkaMessage implements Serializable {
 
     public void setValue(String value) {
         this.value = value;
-    }
-
-
-    public int getClientID() {
-        return clientID;
     }
 
     public String[] getTopic() {
@@ -100,10 +99,12 @@ public class KafkaMessage implements Serializable {
     public String toString() {
         return "KafkaMessage {" +
                 "messageID=" + messageID +
-                ", senderID=" + clientID +
+                ", senderID=" + senderID +
                 ", messageType=" + messageType +
                 ", value='" + value + '\'' +
                 ", topic=" + Arrays.toString(topic) +
+                ", OffSet=" + offset +
+                ", TimeStamp=" + timeStamp +
                 '}';
     }
 

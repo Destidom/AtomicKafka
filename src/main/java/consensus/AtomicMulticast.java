@@ -1,10 +1,12 @@
 package consensus;
 
+import Runnables.ConsumerThread;
 import model.KafkaMessage;
 import model.Type;
 import org.apache.commons.lang3.SerializationUtils;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -76,19 +78,21 @@ public class AtomicMulticast implements Atomic {
         if (list == null) {
             System.out.println("Init list");
             list = new ConcurrentHashMap<>();
-            list.put(msg.getClientID(), msg);
+            msg.setSenderID(ConsumerThread.CLIENT_ID); // Set node as sender.
+            list.put(msg.getSenderID(), msg);
             state.put(msg.getMessageID(), list);
         } else {
             System.out.println("adding to list");
-            state.get(msg.getMessageID()).put(msg.getClientID(), msg);
+            state.get(msg.getMessageID()).put(msg.getSenderID(), msg);
         }
 
 
         // Create response message. (Notify to ourselves, TODO: Remove self sending to notify)
         KafkaMessage cloned = SerializationUtils.clone(msg);
-
+        cloned.setSenderID(ConsumerThread.CLIENT_ID);
         if (msg.getMessageType() == Type.NotifyMessage) {
             // Respond to other nodes that we have gotten the message from client.
+            // TODO: Make sure that we dont send ACK on behalf of other nodes!
             cloned.setMessageType(Type.AckMessage);
         } else {
             // Notify others that there are a new message TODO: Redo logic to be reactive instead of proactive.
@@ -106,16 +110,15 @@ public class AtomicMulticast implements Atomic {
         // If we enter phase 2, submit a new message with our timestamp and offset
         System.out.println("In phase two with " + msg.toString());
         ConcurrentHashMap<Integer, KafkaMessage> messageMap = this.state.get(msg.getMessageID());
-        KafkaMessage storedMessage = messageMap.get(msg.getClientID());
-
-        // Does not exists, send out NACK.
-        if (storedMessage == null) {
-            // Create NACK to restart process?
-            // Should not be possible to get here, but still important to test for it
+        KafkaMessage storedMessage = null;
+        if (msg.getMessageType() == Type.AckMessage) {
+            messageMap.put(msg.getSenderID(), msg);
+            storedMessage = msg;
         }
 
+
         // Check if we have the Client/Notify message, if so update stored msg to ACK state.
-        if (storedMessage.getClientID() == msg.getClientID() && storedMessage.getMessageID() == msg.getMessageID()) {
+        if (storedMessage.getSenderID() == msg.getSenderID() && storedMessage.getMessageID() == msg.getMessageID()) {
             storedMessage.setMessageType(Type.AckMessage);
         }
 
@@ -126,20 +129,38 @@ public class AtomicMulticast implements Atomic {
         for (Map.Entry<Integer, KafkaMessage> entry : this.state.get(msg.getMessageID()).entrySet()) {
             if (entry.getValue().getMessageType() != Type.AckMessage) {
                 allAcks = false;
+                System.out.println("aaaa " + entry.getValue());
             } else {
                 // Store unique senders.
                 // TODO: Create correlation between SenderID and Topic somehow.
+                // TODO: will not work if one node takes responsability over multiple topics...
                 haveTopicResponses.add(entry.getValue().getSenderID());
             }
         }
 
         // TODO: Improve this section to handle the specific topics and number of acks.
-        // TODO: Find out which offset/timestamp is the latest and send it to others.
         if (allAcks && haveTopicResponses.size() == storedMessage.getTopic().length) {
             // Check if we have enough Acks.
             System.out.println("We got all acks now!");
-            // Create response message. (Notify to ourselves, TODO: Remove self sending to notify)
-            KafkaMessage cloned = SerializationUtils.clone(msg);
+            // TODO: When all ACKS: Find out which offset/timestamp is the latest and send it to others.
+            Iterator it = messageMap.entrySet().iterator();
+            KafkaMessage decidedMessage = null;
+            long lastestOffset = -999L;
+            long lastestTimeStamp = -999L;
+            while (it.hasNext()) {
+                Map.Entry<Integer, KafkaMessage> pair = (Map.Entry) it.next();
+                KafkaMessage tmpMsg = pair.getValue();
+                if (lastestOffset < tmpMsg.getOffset() && lastestTimeStamp < tmpMsg.getTimeStamp()) {
+                    lastestOffset = tmpMsg.getOffset();
+                    lastestTimeStamp = tmpMsg.getTimeStamp();
+                    decidedMessage = tmpMsg;
+                    System.out.println(pair.getKey() + " = " + pair.getValue());
+                }
+            }
+
+            // Create response message. (Notify to ourselves)
+            KafkaMessage cloned = SerializationUtils.clone(decidedMessage);
+            cloned.setSenderID(ConsumerThread.CLIENT_ID);
             cloned.setMessageType(Type.Decided);
             return cloned;
         } else {
@@ -156,8 +177,41 @@ public class AtomicMulticast implements Atomic {
         // Check if we have achieved phase3, meaning every node has recieved the TS and offset.
         // Send a decision message to every node.
         System.out.println("In phase three with " + msg.toString());
-        // TODO: Decide on a message and send decided msg out.
-        // TODO: Based on Timestamp, offset, they "should" never end up being the same as another message
+        ConcurrentHashMap<Integer, KafkaMessage> messageMap = this.state.get(msg.getMessageID());
+        if (msg.getMessageType() == Type.Decided) {
+            messageMap.put(msg.getSenderID(), msg);
+        }
+
+        // TODO: Go through all deliverable messages and deliver by offsets. from earliest to latest.
+        boolean allDecided = true;
+        long matchOffset = msg.getOffset();
+        long matchTimeStamp = msg.getTimeStamp();
+        Set<Integer> haveTopicResponses = new HashSet<>();
+        for (Map.Entry<Integer, KafkaMessage> entry : this.state.get(msg.getMessageID()).entrySet()) {
+            if (entry.getValue().getMessageType() != Type.Decided
+                    && entry.getValue().getTimeStamp() != matchTimeStamp
+                    && entry.getValue().getOffset() != matchOffset) {
+                allDecided = false;
+                System.out.println("BBBBBBBBBBBB " + entry.getValue());
+            } else {
+                // Store unique senders.
+                // TODO: Create correlation between SenderID and Topic somehow.?
+                // TODO: will not work if one node takes responsability over multiple topics...
+                haveTopicResponses.add(entry.getValue().getSenderID());
+            }
+        }
+        // TODO: If everyone has decided on message and all have the same offset and timestamp, do delivery
+        if (allDecided && haveTopicResponses.size() == msg.getTopic().length) {
+            KafkaMessage cloned = SerializationUtils.clone(msg);
+            cloned.setSenderID(ConsumerThread.CLIENT_ID);
+            cloned.setMessageType(Type.Delivery);
+            // TODO: When delivered, clear out the delivered messages from state.
+            System.out.println("Delivering " + cloned);
+            return cloned;
+        } else {
+            System.out.println("Waiting for decided values!");
+        }
+
         return null;
     }
 
@@ -166,6 +220,8 @@ public class AtomicMulticast implements Atomic {
         // If decision node is received from everybody. Deliver it to the deliver topic(?)
         // Delete it from HashMap.
         System.out.println("In phase four with " + msg.toString());
+        // TODO: Verification of delivered messages?
+
         // TODO: Find out how to deliver, same Topic or a dedicated Topic for delivered messages?
         // TODO: Pros with dedicated: less scann of topic to find delivered messages, easier to test.
         // TODO: Con with dedicated: requires more of a client.

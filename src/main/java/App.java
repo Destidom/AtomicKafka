@@ -11,7 +11,8 @@ import java.util.Scanner;
 // {"messageID":1,"clientID":1,"messageType":"CLIENT","value":"Hello","topic":["T1","T2"]}
 
 // Command to run jar
-// java -jar 0.jar -Topic T1 -TransactionID 1 -GroupID 1
+// java -jar 0.jar -Topic T1 -TransactionID 1 -GroupID 1 -ID 1
+// java -jar 0.jar -Topic T2 -TransactionID 2 -GroupID 2 -ID 2
 
 // Notes:
 // Every "AtomicNode" is a detached process, what this mean is that they do not know of any other topic or any other
@@ -34,6 +35,8 @@ import java.util.Scanner;
 /*
   {"messageID":1,"clientID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1","T2"]}
   {"messageID":1,"clientID":2,"messageType":"NotifyMessage","value":"Hello","topic":["T1","T2"]}
+
+  {"messageID":1,"clientID":2,"messageType":"AckMessage","value":"Hello","topic":["T1","T2"]}
 
 */
 
@@ -60,7 +63,7 @@ public class App {
         final ProducerContainer producer = new ProducerContainer(args.ID, args.TransactionID);
 
         // Create a consumer that listens to incoming messages on a topic.
-        ConsumerThread cThread = new ConsumerThread(producer, args.Topic, args.GroupID);
+        ConsumerThread cThread = new ConsumerThread(producer, args.Topic, args.GroupID, args.ID);
         Thread t = new Thread(cThread);
         t.start();
 
