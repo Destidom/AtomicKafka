@@ -16,7 +16,9 @@ import java.util.concurrent.ConcurrentHashMap;
 // TODO: Find out how to deliver, same Topic or a dedicated Topic for delivered messages?
 // TODO: Pros with dedicated: less scann of topic to find delivered messages, easier to test.
 // TODO: Con with dedicated: requires more of a client.
-
+// TODO: Read up on Kafka mock library.
+// TODO: implement round and vround, to decline messageIDs lower than a certain value for phase I ?
+// Since ClientMessage and notify message is the entry point of the system.
 
 /**
  * This class will decided which message type to send to the other topics.
@@ -31,6 +33,7 @@ public class AtomicMulticast implements Atomic {
     private final ConcurrentHashMap<Integer, ConcurrentHashMap<Integer, KafkaMessage>> state = new ConcurrentHashMap<>();
 
     public static AtomicMulticast instance;
+
 
     public static AtomicMulticast getInstance() {
         if (instance == null) {

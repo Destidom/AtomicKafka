@@ -146,7 +146,7 @@ public class ConsumerThread implements Runnable {
                                 // (not needed for now)
                                 break;
                             default:
-                                System.out.println("Something wrong happend in ConsumerThread Switch");
+                                System.out.println("Something wrong happened in ConsumerThread Switch");
 
                         }
                     } else {

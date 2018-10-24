@@ -31,10 +31,6 @@ import java.util.Scanner;
 // 2. Receive acks, decide on an ACK message.
 // 3. Receive Decided, when all decided messages #ofTopics is received, send delivery.
 
-/*
- * If a node crashes, maybe another node can spawn a new process, or take over the responsibility of the crashed node.
- * */
-
 public class App {
     public static void main(String[] arguments) {
         Args args = new Args();
