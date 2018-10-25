@@ -138,6 +138,7 @@ public class AtomicMulticast implements Atomic {
 
         Set<Integer> haveTopicResponses = new HashSet<>();
         for (Map.Entry<Integer, KafkaMessage> entry : this.state.get(msg.getMessageID()).entrySet()) {
+            // A entry can be updated to decided if our queue is slow.
             if (entry.getValue().getMessageType() != Type.AckMessage) {
                 allAcks = false;
                 System.out.println("aaaa " + entry.getValue());
@@ -147,6 +148,16 @@ public class AtomicMulticast implements Atomic {
                 // TODO: will not work if one node takes responsability over multiple topics...
                 haveTopicResponses.add(entry.getValue().getSenderID());
             }
+
+            if (allAcks == false && entry.getValue().getMessageType() == Type.Decided) {
+                allAcks = true;
+                haveTopicResponses.add(entry.getValue().getSenderID());
+            }
+            // Store unique senders.
+            // TODO: Create correlation between SenderID and Topic somehow.
+            // TODO: will not work if one node takes responsability over multiple topics...
+
+
         }
 
         // TODO: Improve this section to handle the specific topics and number of acks.
@@ -187,6 +198,14 @@ public class AtomicMulticast implements Atomic {
         // Check if we have achieved phase3, meaning every node has recieved the TS and offset.
         // Send a decision message to every node.
         System.out.println("In phase three with " + msg.toString());
+        if (this.state == null) {
+            System.out.println("State is null");
+        }
+
+        if (msg == null) {
+            System.out.println("MSG is null");
+        }
+
         ConcurrentHashMap<Integer, KafkaMessage> messageMap = this.state.get(msg.getMessageID());
         if (msg.getMessageType() == Type.Decided) {
             messageMap.put(msg.getSenderID(), msg);
@@ -216,7 +235,7 @@ public class AtomicMulticast implements Atomic {
             cloned.setMessageType(Type.Delivery);
             // TODO: When delivered, clear out the delivered messages from state.
             System.out.println("Delivering " + cloned);
-            this.state.remove(msg.getMessageID());
+            //this.state.remove(msg.getMessageID());
             return cloned;
         } else {
             System.out.println("Waiting for decided values!");
