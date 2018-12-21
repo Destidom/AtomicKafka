@@ -10,7 +10,7 @@ public class Args {
     public List<String> parameters = new ArrayList<>();
 
     @Parameter(names = {"-Topic", "name"}, description = "Main topic to subscribe too")
-    public String Topic = "T1";
+    public String Topic = "T3";
 
     @Parameter(names = {"-TransactionID", "ID"}, description = "TransactionID needs to be unique")
     public String TransactionID = "default";

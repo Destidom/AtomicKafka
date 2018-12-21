@@ -11,6 +11,8 @@ import java.util.Scanner;
   {"messageID":3,"clientID":1,"messageType":"ClientMessage","value":"Hello Soup","topic":["T1"]}
   {"messageID":1,"clientID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1","T2"]}
   {"messageID":2,"clientID":2,"messageType":"ClientMessage","value":"Hello World","topic":["T1","T2","T3"]}
+  {"messageID":1,"senderID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1"]}
+  {"messageID":2893,"senderID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1"],"offset":-999,"timeStamp":-999}
 
 */
 
@@ -51,6 +53,7 @@ public class App {
         // Create a consumer that listens to incoming messages on a topic.
         ConsumerThread cThread = new ConsumerThread(producer, args.Topic, args.GroupID, args.ID);
         Thread t = new Thread(cThread);
+        t.setName(args.Topic);
         t.start();
 
         // Do we need a consensus thread???

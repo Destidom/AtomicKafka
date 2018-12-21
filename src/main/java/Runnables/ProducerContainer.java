@@ -102,8 +102,6 @@ public class ProducerContainer implements IProducer {
 
             try {
                 RecordMetadata metadata = producer.send(record).get();
-                System.out.println("Sending: Record sent with key " + 1 + " to partition " + metadata.partition()
-                        + " with offset " + metadata.offset());
                 producer.commitTransaction();
             } catch (KafkaException e) {
                 producer.abortTransaction();
@@ -149,9 +147,7 @@ public class ProducerContainer implements IProducer {
                     ProducerRecord<Long, String> record = new ProducerRecord<>(topic[index],
                             encodedMsg);
 
-                    RecordMetadata metadata = producer.send(record).get();
-                    System.out.println("Sending: Record sent with key " + index + " to partition " + metadata.partition()
-                            + " with offset " + metadata.offset());
+                    RecordMetadata metadata = producer.send(record).get(); // (A??)-Synchronouse send.
 
                 }
                 producer.commitTransaction();

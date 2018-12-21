@@ -9,5 +9,5 @@ public interface Constants {
     Integer MAX_NO_MESSAGE_FOUND_COUNT = 10000;
     String OFFSET_RESET_LATEST = "latest";
     String OFFSET_RESET_EARLIER = "earliest";
-    Integer MAX_POLL_RECORDS = 1;
+    Integer MAX_POLL_RECORDS = 1000;
 }

@@ -100,7 +100,6 @@ public class ConsumerThread implements Runnable {
                 if (record.value() != null) {
                     KafkaMessage msg = json.decode(record.value());
                     if (msg != null) { // set offset and timestamp for first time message.
-                        System.out.println("We got message " + msg);
                         KafkaMessage toSend = null;
                         switch (msg.getMessageType()) {
                             case ClientMessage: // Phase one, send out and receive notifications of msgs
@@ -137,7 +136,6 @@ public class ConsumerThread implements Runnable {
                                 }
                                 break;
                             case Delivery: // Phase 4, Deliver msg to the topics.
-                                System.out.println("Successfully delivered " + msg);
                                 break;
                             case NackMessage: // Node disagree with decision, restart(?).
                                 // (not needed for now)
@@ -167,9 +165,6 @@ public class ConsumerThread implements Runnable {
             consumer.commitAsync();
 
         }
-        System.out.println("Polls without messages: " + noMessageFound);
-
-        // Shutting down the atomic Node.
         this.producer.stop();
         consumer.close();
     }

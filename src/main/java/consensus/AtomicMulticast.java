@@ -78,23 +78,20 @@ public class AtomicMulticast implements Atomic {
 
         // If only one topic, skip phases and storing message and send it directly to kafka.
         if (msg.getTopic().length == 1) {
-            System.out.println("Unique msg " + msg.toString());
+            //System.out.println("Unique msg " + msg.toString());
             // Send message directly to phase 4.
-            msg.setMessageType(Type.UniqueAckMessage);
+            msg.setMessageType(Type.Delivery);
             return msg;
         }
 
-        System.out.println("In phase one with " + msg.toString());
 
         ConcurrentHashMap<Integer, KafkaMessage> list = state.get(msg.getMessageID());
         if (list == null) {
-            System.out.println("Init list");
             list = new ConcurrentHashMap<>();
             msg.setSenderID(ConsumerThread.CLIENT_ID); // Set node as sender.
             list.put(msg.getSenderID(), msg);
             state.put(msg.getMessageID(), list);
         } else {
-            System.out.println("adding to list");
             state.get(msg.getMessageID()).put(msg.getSenderID(), msg);
         }
 
@@ -119,7 +116,6 @@ public class AtomicMulticast implements Atomic {
     public KafkaMessage phaseTwo(KafkaMessage msg) {
         // Check if message has achieved phase2, meaning every node has received the msg.
         // If we enter phase 2, submit a new message with our timestamp and offset
-        System.out.println("In phase two with " + msg.toString());
         ConcurrentHashMap<Integer, KafkaMessage> messageMap = this.state.get(msg.getMessageID());
         KafkaMessage storedMessage = null;
         if (msg.getMessageType() == Type.AckMessage) {
@@ -141,7 +137,6 @@ public class AtomicMulticast implements Atomic {
             // A entry can be updated to decided if our queue is slow.
             if (entry.getValue().getMessageType() != Type.AckMessage) {
                 allAcks = false;
-                System.out.println("aaaa " + entry.getValue());
             } else {
                 // Store unique senders.
                 // TODO: Create correlation between SenderID and Topic somehow.
@@ -163,7 +158,6 @@ public class AtomicMulticast implements Atomic {
         // TODO: Improve this section to handle the specific topics and number of acks.
         if (allAcks && haveTopicResponses.size() == storedMessage.getTopic().length) {
             // Check if we have enough Acks.
-            System.out.println("We got all acks now!");
             // TODO: When all ACKS: Find out which offset/timestamp is the latest and send it to others.
             Iterator it = messageMap.entrySet().iterator();
             KafkaMessage decidedMessage = null;
@@ -182,12 +176,12 @@ public class AtomicMulticast implements Atomic {
             // Create response message. (Notify to ourselves)
             KafkaMessage cloned = SerializationUtils.clone(decidedMessage);
             cloned.setSenderID(ConsumerThread.CLIENT_ID);
-            cloned.setMessageType(Type.Decided);
+            cloned.setMessageType(Type.Delivery);
             return cloned;
-        } else {
+        } /*else {
             // wait for retrieving all Acks.
             System.out.println("We await for ACKS now!");
-        }
+        }*/
 
 
         return null;
@@ -197,7 +191,6 @@ public class AtomicMulticast implements Atomic {
     public KafkaMessage phaseThree(KafkaMessage msg) {
         // Check if we have achieved phase3, meaning every node has recieved the TS and offset.
         // Send a decision message to every node.
-        System.out.println("In phase three with " + msg.toString());
         if (this.state == null) {
             System.out.println("State is null");
         }
@@ -234,11 +227,10 @@ public class AtomicMulticast implements Atomic {
             cloned.setSenderID(ConsumerThread.CLIENT_ID);
             cloned.setMessageType(Type.Delivery);
             // TODO: When delivered, clear out the delivered messages from state.
-            System.out.println("Delivering " + cloned);
             //this.state.remove(msg.getMessageID());
             return cloned;
         } else {
-            System.out.println("Waiting for decided values!");
+            //System.out.println("Waiting for decided values!");
         }
 
         return null;
@@ -246,7 +238,7 @@ public class AtomicMulticast implements Atomic {
 
     @Override
     public KafkaMessage phaseFour(KafkaMessage msg) {
-        System.out.println("In phase four with " + msg.toString());
+        //System.out.println("In phase four with " + msg.toString());
         KafkaMessage cloned = SerializationUtils.clone(msg);
         cloned.setSenderID(ConsumerThread.CLIENT_ID);
         cloned.setMessageType(Type.Delivery);
