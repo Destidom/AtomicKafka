@@ -120,7 +120,7 @@ public class ConsumerThread implements Runnable {
                             case AckMessage: // Phase 2, received all ACKS msgs decide on a message.
                                 toSend = AtomicMulticast.getInstance().phaseTwo(msg);
                                 if (toSend != null) {
-                                    ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
+                                    ProducerContainer.getInstance().sendMessage(toSend, this.topic);
                                 }
                                 break;
                             case Decided: // Phase 3, Received all Decided messages needed, start delivery.

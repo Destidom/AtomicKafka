@@ -117,6 +117,12 @@ public class AtomicMulticast implements Atomic {
         // Check if message has achieved phase2, meaning every node has received the msg.
         // If we enter phase 2, submit a new message with our timestamp and offset
         ConcurrentHashMap<Integer, KafkaMessage> messageMap = this.state.get(msg.getMessageID());
+        if (messageMap == null) { // TODO: Temp fix
+            messageMap = new ConcurrentHashMap<>();
+            msg.setSenderID(ConsumerThread.CLIENT_ID); // Set node as sender.
+            messageMap.put(msg.getSenderID(), msg);
+            state.put(msg.getMessageID(), messageMap);
+        }
         KafkaMessage storedMessage = null;
         if (msg.getMessageType() == Type.AckMessage) {
             messageMap.put(msg.getSenderID(), msg);
