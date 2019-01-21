@@ -1,0 +1,92 @@
+- name: create dest
+  hosts: localhost
+  vars: 
+    basedest: "~/programming/ansible/data/"
+    mydatadest: "data_{{ansible_date_time.date}}_{{ansible_date_time.time}}"
+
+  tasks: 
+  - name: Make dest persistant
+    set_fact:
+      mydest: "{{basedest}}{{mydatadest}}"
+  - name: create directory
+    file:
+      path:   "{{mydest}}"
+      state:  directory
+      mode:   0755
+  - name: test
+    debug:
+      msg: "mydest is {{mydest}}"
+        
+
+
+- name: fetch server data
+  hosts: raft-servers
+  remote_user: frtvedt
+  gather_facts: false
+  tags:
+    - server
+
+  tasks:
+  - name: set the facts per host
+    set_fact:
+      mydest: "{{hostvars['localhost']['mydest']}}"
+
+  - name: copying to {{mydest}}
+    synchronize: 
+      dest: "{{mydest}}"
+      src:  /local/scratch/frtvedt/data/
+      mode: pull
+  - name: remove data folder
+    file:
+      path: /local/scratch/frtvedt/data
+      state: absent 
+    tags:
+        - cleanup
+  - name: recreate data folder
+    file:
+      path: /local/scratch/frtvedt/data
+      state: directory
+      mode:   0755
+    tags:
+        - cleanup
+
+- name: fetch client data
+  hosts: raft-clients
+  remote_user: frtvedt
+  gather_facts: false
+  tags:
+    - client
+
+  tasks:
+  - name: set the facts per host
+    set_fact:
+      mydest: "{{hostvars['localhost']['mydest']}}"
+  - name: copying to {{mydest}}
+    synchronize: 
+      dest: "{{mydest}}"
+      src:  /local/scratch/frtvedt/data/
+      mode: pull
+  - name: remove data folder
+    file:
+      path: /local/scratch/frtvedt/data
+      state: absent 
+    tags:
+        - cleanup
+  - name: recreate data folder
+    file:
+      path: /local/scratch/frtvedt/data
+      state: directory
+      mode:   0755
+    tags:
+        - cleanup
+
+- name: postprocess
+  hosts: local
+  tags:
+    - postprocess
+
+  tasks:
+    - name: postprocess latencythroughput
+      shell: postprocess 1 latency_Cl* > latency.txt
+      args:
+        chdir: "{{mydest}}"

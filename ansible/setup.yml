@@ -1,0 +1,16 @@
+---
+- hosts: badne
+  remote_user: frtvedt
+
+  tasks:
+  - name: test connection
+    ping:
+  - name: Clean artifact path
+    file:
+      state: absent
+      path: ~/kafka/kafka_2.11-2.0.0/tmp/
+  - name: create directory
+    file:
+      path:   ~/kafka/kafka_2.11-2.0.0/tmp/
+      state:  directory
+      mode:   0755

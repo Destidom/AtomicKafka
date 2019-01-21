@@ -172,6 +172,7 @@ public class AtomicMulticast implements Atomic {
             while (it.hasNext()) {
                 Map.Entry<Integer, KafkaMessage> pair = (Map.Entry) it.next();
                 KafkaMessage tmpMsg = pair.getValue();
+                // TODO: WE HAVE TO CHECK AGAINST OTHER MESSAGES WITH DIFFERENT MSG-ID
                 if (lastestOffset < tmpMsg.getOffset() && lastestTimeStamp < tmpMsg.getTimeStamp()) { // TODO: Fix this..
                     lastestOffset = tmpMsg.getOffset();
                     lastestTimeStamp = tmpMsg.getTimeStamp();
