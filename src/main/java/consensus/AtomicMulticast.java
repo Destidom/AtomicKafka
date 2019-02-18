@@ -10,7 +10,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
+import  java.util.PriorityQueue;
 
 // TODO: Verification of delivered messages?
 // TODO: Find out how to deliver, same Topic or a dedicated Topic for delivered messages?
@@ -33,6 +33,8 @@ public class AtomicMulticast implements Atomic {
     private final ConcurrentHashMap<Integer, ConcurrentHashMap<Integer, KafkaMessage>> state = new ConcurrentHashMap<>();
 
     public static AtomicMulticast instance;
+
+    private final PriorityQueue<KafkaMessage> deliveryHeap = new PriorityQueue<>();
 
 
     public static AtomicMulticast getInstance() {
