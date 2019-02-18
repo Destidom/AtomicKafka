@@ -3,7 +3,7 @@ package model;
 import java.io.Serializable;
 import java.util.Arrays;
 
-public class KafkaMessage implements Serializable {
+public class KafkaMessage implements Serializable, Cloneable {
 
     private static final long serialVersionUID = 6024531281280351055L;
     private int messageID;
@@ -94,6 +94,10 @@ public class KafkaMessage implements Serializable {
     }
 
     // TODO: Implement Equals, hashcode methods for comparison.
+
+    public Object clone() throws CloneNotSupportedException {
+        return (KafkaMessage) super.clone();
+    }
 
     @Override
     public String toString() {

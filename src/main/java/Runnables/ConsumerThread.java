@@ -104,14 +104,12 @@ public class ConsumerThread implements Runnable {
                         switch (msg.getMessageType()) {
                             case ClientMessage: // Phase one, send out and receive notifications of msgs
                                 msg.setOffset(record.offset()); // Set offset for clientMessage since Phase I
-                                msg.setTimeStamp(record.timestamp()); // Set Timestamp for clientMessage since Phase I
                                 toSend = AtomicMulticast.getInstance().phaseOne(msg);
                                 // Sending ack to ourselves.
                                 ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
                                 break;
                             case NotifyMessage: //Phase one, receive Notify messages.
                                 msg.setOffset(record.offset());
-                                msg.setTimeStamp(record.timestamp());
                                 toSend = AtomicMulticast.getInstance().phaseOne(msg);
                                 // This one should only send ACK to ourselves.
                                 if (toSend.getSenderID() == this.CLIENT_ID)
