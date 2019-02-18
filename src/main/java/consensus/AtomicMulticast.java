@@ -83,9 +83,11 @@ public class AtomicMulticast implements Atomic {
             //System.out.println("Unique msg " + msg.toString());
             // Send message directly to phase 4.
             msg.setMessageType(Type.Delivery);
+            deliveryHeap.add(msg); // Delivery happens through deliveryHeap!
             return msg;
         }
 
+        // More than once receiver!
 
         ConcurrentHashMap<Integer, KafkaMessage> list = state.get(msg.getMessageID());
         if (list == null) {
