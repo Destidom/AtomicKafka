@@ -104,16 +104,19 @@ public class ConsumerThread implements Runnable {
                         switch (msg.getMessageType()) {
                             case ClientMessage: // Phase one, send out and receive notifications of msgs
                                 msg.setOffset(record.offset()); // Set offset for clientMessage since Phase I
+                                System.out.println("Got msg");
                                 toSend = AtomicMulticast.getInstance().phaseOne(msg);
                                 // Sending ack to ourselves.
                                 ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
                                 break;
                             case NotifyMessage: //Phase one, receive Notify messages.
                                 msg.setOffset(record.offset());
+                                System.out.println("Got notify");
                                 toSend = AtomicMulticast.getInstance().phaseOne(msg);
 
                                 // Should only send our own ACK.
                                 if (toSend.getSenderID() == this.CLIENT_ID)
+                                    System.out.println("Seinding notify");
                                     ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
 
                                 break;
@@ -123,9 +126,10 @@ public class ConsumerThread implements Runnable {
 
                                 am.phaseTwo(msg); // no return, ignore it.
                                 List<KafkaMessage> delivery = am.checkDelivery();
-
+                                System.out.println("Received ack");
                                 // Deliver all deliverable messages.
                                 for(int i =0; i < delivery.size(); i++) {
+                                    System.out.println("There are deliverable messages!");
                                     prod.sendMessage(delivery.get(i), delivery.get(i).getTopic());
                                 }
                                 break;
