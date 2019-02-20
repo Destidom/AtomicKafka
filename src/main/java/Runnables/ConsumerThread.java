@@ -111,17 +111,25 @@ public class ConsumerThread implements Runnable {
                             case NotifyMessage: //Phase one, receive Notify messages.
                                 msg.setOffset(record.offset());
                                 toSend = AtomicMulticast.getInstance().phaseOne(msg);
-                                // This one should only send ACK to ourselves.
+
+                                // Should only send our own ACK.
                                 if (toSend.getSenderID() == this.CLIENT_ID)
                                     ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
+
                                 break;
                             case AckMessage: // Phase 2, received all ACKS msgs decide on a message.
-                                toSend = AtomicMulticast.getInstance().phaseTwo(msg);
-                                if (toSend != null) {
-                                    ProducerContainer.getInstance().sendMessage(toSend, this.topic);
+                                AtomicMulticast am = AtomicMulticast.getInstance();
+                                ProducerContainer prod = ProducerContainer.getInstance();
+
+                                am.phaseTwo(msg); // no return, ignore it.
+                                List<KafkaMessage> delivery = am.checkDelivery();
+
+                                // Deliver all deliverable messages.
+                                for(int i =0; i < delivery.size(); i++) {
+                                    prod.sendMessage(delivery.get(i), delivery.get(i).getTopic());
                                 }
                                 break;
-                            case Decided: // Phase 3, Received all Decided messages needed, start delivery.
+                            case Decided: // NOT IN USE!
                                 toSend = AtomicMulticast.getInstance().phaseThree(msg);
                                 if (toSend != null) {
                                     ProducerContainer.getInstance().sendMessage(toSend, this.topic);
@@ -135,7 +143,7 @@ public class ConsumerThread implements Runnable {
                                 break;
                             case Delivery: // Phase 4, Deliver msg to the topics.
                                 break;
-                            case NackMessage: // Node disagree with decision, restart(?).
+                            case NackMessage: // NOT IN USE!
                                 // (not needed for now)
                                 break;
                             case DupMessage: // Already got this message (used if a Node tries to take responsibility over another topic)

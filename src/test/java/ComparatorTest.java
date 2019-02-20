@@ -1,7 +1,6 @@
+import comparator.TimestampAscending;
 import model.KafkaMessage;
 import model.Type;
-import org.junit.Before;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,30 +14,51 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ComparatorTest {
 
     private PriorityQueue<KafkaMessage> queue = null;
+    private ConcurrentHashMap<Integer, KafkaMessage> state = null;
+
+
+    private KafkaMessage m1 = null;
+    private KafkaMessage m2 = null;
+    private KafkaMessage m3 = null;
+    private KafkaMessage m4 = null;
+    private KafkaMessage m5 = null;
 
     @BeforeEach
     void init(){
-        queue = new PriorityQueue<>(new TimestampComparator());
+        queue = new PriorityQueue<>(new TimestampAscending());
+        state = new ConcurrentHashMap<>();
+
+        m1 = new KafkaMessage();
+        m1.setTimeStamp(101L);
+        m1.setSenderID(1);
+        m1.setMessageID(1);
+
+        m2 = new KafkaMessage();
+        m2.setSenderID(2);
+        m2.setMessageID(2);
+        m2.setTimeStamp(201L);
+
+        m3 = new KafkaMessage();
+        m3.setSenderID(3);
+        m3.setMessageID(3);
+        m3.setTimeStamp(301L);
+
+        m4 = new KafkaMessage();
+        m4.setTimeStamp(401L);
+        m4.setSenderID(4);
+        m4.setMessageID(4);
+
+
+        m5 = new KafkaMessage();
+        m5.setTimeStamp(501L);
+        m5.setSenderID(5);
+        m5.setMessageID(5);
+
+
     }
 
     @Test
     void TimestampPullingTest() {
-        KafkaMessage m1 = new KafkaMessage();
-        m1.setTimeStamp(1L);
-
-        KafkaMessage m2 = new KafkaMessage();
-        m2.setTimeStamp(2L);
-
-        KafkaMessage m3 = new KafkaMessage();
-        m3.setTimeStamp(3L);
-
-        KafkaMessage m4 = new KafkaMessage();
-        m4.setTimeStamp(4L);
-
-        KafkaMessage m5 = new KafkaMessage();
-        m5.setTimeStamp(5L);
-
-        PriorityQueue<KafkaMessage> queue = new PriorityQueue<>(new TimestampComparator());
 
         queue.add(m2);
         queue.add(m4);
@@ -46,7 +66,7 @@ public class ComparatorTest {
         queue.add(m5);
         queue.add(m1);
 
-        Long[] wantedTS = new Long[] {1L, 2L, 3L, 4L, 5L};
+        Long[] wantedTS = new Long[] {101L, 201L, 301L, 401L, 501L};
 
         int index = 0;
         while(!queue.isEmpty()) {
@@ -61,13 +81,8 @@ public class ComparatorTest {
 
     @Test
     void ObjectreferenceEqualTest() {
-        KafkaMessage m1 = new KafkaMessage();
-        m1.setTimeStamp(101L);
-        m1.setSenderID(1);
-        m1.setMessageID(1);
-
         ConcurrentHashMap<Integer, KafkaMessage> state = new ConcurrentHashMap<>();
-        PriorityQueue<KafkaMessage> queue = new PriorityQueue<>(new TimestampComparator());
+        PriorityQueue<KafkaMessage> queue = new PriorityQueue<>(new TimestampAscending());
 
         state.put(m1.getMessageID(), m1);
         queue.add(m1);
@@ -80,23 +95,6 @@ public class ComparatorTest {
 
     @Test
     void QueueRebalanceTest() {
-        KafkaMessage m1 = new KafkaMessage();
-        m1.setTimeStamp(101L);
-        m1.setSenderID(1);
-        m1.setMessageID(1);
-
-        KafkaMessage m2 = new KafkaMessage();
-        m2.setSenderID(2);
-        m2.setMessageID(2);
-        m2.setTimeStamp(201L);
-
-        KafkaMessage m3 = new KafkaMessage();
-        m3.setSenderID(3);
-        m3.setMessageID(3);
-        m3.setTimeStamp(301L);
-
-        ConcurrentHashMap<Integer, KafkaMessage> state = new ConcurrentHashMap<>();
-        PriorityQueue<KafkaMessage> queue = new PriorityQueue<>(new TimestampComparator());
 
         state.put(m3.getMessageID(), m3);
         queue.add(m3);
@@ -128,12 +126,62 @@ public class ComparatorTest {
                 fail("Comparator failed QueueRebalanceTest \n" + msg.getTimeStamp() + " " + index);
             }
         }
-
-
-
-
     }
 
+    @Test
+    void EqualTimestampDifferentMessageIDReference() {
+
+        state.put(m3.getMessageID(), m3);
+        queue.add(m3);
+
+        state.put(m2.getMessageID(), m2);
+        queue.add(m2);
+
+
+        state.put(m1.getMessageID(), m1);
+        queue.add(m1);
+
+
+        // REMEMBER WHEN EDITING A QUEUE OBJECT NEED TO REINSERT THE OBJECT INTO THE QUEUE AGAIN TO GET RIGHT ORDER!
+        KafkaMessage[] wantedMsg = new KafkaMessage[] {m1, m2, m3};
+
+        int index = 0;
+        while(!queue.isEmpty()) {
+            KafkaMessage msg = queue.poll();
+            System.out.println(msg.getMessageID() + " wanted: " + wantedMsg[index].getMessageID() );
+            if (msg == wantedMsg[index]) { // Reference Check.
+                index++;
+            } else {
+                fail("Comparator failed EqualTimestampDifferentMessageIDReference \n" + msg.getTimeStamp() + " " + index);
+            }
+        }
+    }
+
+    @Test
+    void EqualTimestampDifferentMessageIDEquals() {
+
+        state.put(m3.getMessageID(), m3);
+        queue.add(m3);
+
+        state.put(m2.getMessageID(), m2);
+        queue.add(m2);
+
+
+        state.put(m1.getMessageID(), m1);
+        queue.add(m1);
+
+        KafkaMessage[] wantedMsg = new KafkaMessage[] {m1, m2, m3};
+
+        int index = 0;
+        while(!queue.isEmpty()) {
+            KafkaMessage msg = queue.poll();
+            if (msg.equals(wantedMsg[index])) { // Reference Check.
+                index++;
+            } else {
+                fail("Comparator failed EqualTimestampDifferentMessageIDEquals \n" + msg.getTimeStamp() + " " + index);
+            }
+        }
+    }
 }
 
 

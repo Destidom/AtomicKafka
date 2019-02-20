@@ -100,6 +100,24 @@ public class KafkaMessage implements Serializable, Cloneable {
     }
 
     @Override
+    public boolean equals(Object o) {
+
+        if (o == this) {
+            return true;
+        }
+
+       if (!(o instanceof KafkaMessage)) {
+            return false;
+        }
+
+        // typecast o to KafkaMessage so that we can compare data members
+        KafkaMessage c = (KafkaMessage) o;
+
+        // Compare the data members and return accordingly
+        return c.getMessageID() == this.getMessageID();
+    }
+
+    @Override
     public String toString() {
         return "KafkaMessage {" +
                 "messageID=" + messageID +

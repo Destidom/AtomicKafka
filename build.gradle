@@ -20,8 +20,9 @@ dependencies {
     testCompile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
     compile group: 'com.beust', name: 'jcommander', version: '1.72'
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.0'
-    testCompile('org.junit.jupiter:junit-jupiter-api:5.4.0')
     testRuntime('org.junit.jupiter:junit-jupiter-engine:5.4.0')
+    testCompile('org.junit.jupiter:junit-jupiter-api:5.4.0')
+
 
 
 }
