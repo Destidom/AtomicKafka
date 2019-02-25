@@ -130,7 +130,7 @@ public class ConsumerThread implements Runnable {
                                 // Deliver all deliverable messages.
                                 for(int i =0; i < delivery.size(); i++) {
                                     System.out.println("There are deliverable messages!");
-                                    prod.sendMessage(delivery.get(i), delivery.get(i).getTopic());
+                                    prod.sendMessage(delivery.get(i), this.topic);
                                 }
                                 break;
                             case Decided: // NOT IN USE!
