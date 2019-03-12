@@ -35,17 +35,6 @@ public class ConsumerThread implements Runnable {
         createConsumer();
     }
 
-    public ConsumerThread(List<String> topic) {
-        this.topic = topic;
-        createConsumer();
-    }
-
-    public ConsumerThread(ProducerContainer producer, List<String> topic, String groupID) {
-        this.producer = producer;
-        this.topic = topic;
-        createConsumer();
-    }
-
     public ConsumerThread(ProducerContainer producer, String topic, String groupID, Integer clientID) {
         this.producer = producer;
         this.topic.add(topic);
@@ -84,14 +73,14 @@ public class ConsumerThread implements Runnable {
 
     @Override
     public void run() {
-        int noMessageFound = 0;
         JsonEncoder json = new JsonEncoder();
+        ProducerContainer prod = ProducerContainer.getInstance();
+        AtomicMulticast consensus = AtomicMulticast.getInstance();
         while (running) {
 
             ConsumerRecords<Long, String> consumerRecords = consumer.poll(pollDuriation);
             // 1000 is the time in milliseconds consumer will wait if no record is found at broker.
             if (consumerRecords.count() == 0) {
-                noMessageFound++;
                 continue;
             }
 
@@ -105,29 +94,27 @@ public class ConsumerThread implements Runnable {
                             case ClientMessage: // Phase one, send out and receive notifications of msgs
                                 msg.setOffset(record.offset()); // Set offset for clientMessage since Phase I
                                 System.out.println("Got msg");
-                                toSend = AtomicMulticast.getInstance().phaseOne(msg);
+                                toSend = consensus.phaseOne(msg);
                                 // Sending ack to ourselves.
                                 if (toSend != null)
-                                    ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
+                                    prod.sendMessage(toSend, toSend.getTopic());
                                 break;
                             case NotifyMessage: //Phase one, receive Notify messages.
                                 msg.setOffset(record.offset());
                                 System.out.println("Got notify");
-                                toSend = AtomicMulticast.getInstance().phaseOne(msg);
+                                toSend = consensus.phaseOne(msg);
 
-                                // Should only send our own ACK.
-                                if (toSend.getSenderID() == this.CLIENT_ID)
-                                    System.out.println("Seinding notify");
-                                    ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
+                                // Will only send our own msg
+                                if (toSend != null)
+                                    prod.sendMessage(toSend, toSend.getTopic());
 
                                 break;
                             case AckMessage: // Phase 2, received all ACKS msgs decide on a message.
-                                AtomicMulticast am = AtomicMulticast.getInstance();
-                                ProducerContainer prod = ProducerContainer.getInstance();
+                                consensus.phaseTwo(msg); // no return, ignore it.
+                                List<KafkaMessage> delivery = consensus.checkDelivery();
 
-                                am.phaseTwo(msg); // no return, ignore it.
-                                List<KafkaMessage> delivery = am.checkDelivery();
                                 System.out.println("Received ack");
+
                                 // Deliver all deliverable messages.
                                 for(int i =0; i < delivery.size(); i++) {
                                     System.out.println("There are deliverable messages!");
@@ -135,18 +122,10 @@ public class ConsumerThread implements Runnable {
                                 }
                                 break;
                             case Decided: // NOT IN USE!
-                                toSend = AtomicMulticast.getInstance().phaseThree(msg);
-                                if (toSend != null) {
-                                    ProducerContainer.getInstance().sendMessage(toSend, this.topic);
-                                }
                                 break;
-                            case UniqueAckMessage: // Accept we are the only receiver. Go direct to Delivery
-                                toSend = AtomicMulticast.getInstance().phaseFour(msg);
-                                if (toSend != null) {
-                                    ProducerContainer.getInstance().sendMessage(toSend, this.topic);
-                                }
+                            case UniqueAckMessage: // NOT IN USE
                                 break;
-                            case Delivery: // Phase 4, Deliver msg to the topics.
+                            case Delivery: // NOT IN USE
                                 break;
                             case NackMessage: // NOT IN USE!
                                 // (not needed for now)
@@ -159,20 +138,15 @@ public class ConsumerThread implements Runnable {
 
                         }
                     } else {
-                        System.out.println("Decoded msg is null " + msg);
+                        System.out.println("Decoded msg is null ");
                     }
-
                 } else {
                     System.out.println("No message in value");
                 }
-
             });
 
 
             // commits the offset of record to broker.
-            // We should only do this after a delivery. Commit "eats" up the messages.
-            // It is possible to get the messages back, but is there any good reason to commit the message
-            //  - Only reason I can think of is if we handle multiple messages at once.
             consumer.commitAsync();
 
         }
@@ -180,11 +154,3 @@ public class ConsumerThread implements Runnable {
         consumer.close();
     }
 }
-
- /*System.out.println("Read Record Key " + record.key());
-                System.out.println("Read Record value " + record.value());
-                System.out.println("Read Record partition " + record.partition());
-                System.out.println("Read Record offset " + record.offset());
-                System.out.println("Read Record headers " + record.headers());
-                System.out.println("Read Record TimeStamp " + record.timestamp());
-                System.out.println("Read Record TimeStampType " + record.timestampType());*/
