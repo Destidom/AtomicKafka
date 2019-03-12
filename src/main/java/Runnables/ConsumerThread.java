@@ -107,7 +107,8 @@ public class ConsumerThread implements Runnable {
                                 System.out.println("Got msg");
                                 toSend = AtomicMulticast.getInstance().phaseOne(msg);
                                 // Sending ack to ourselves.
-                                ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
+                                if (toSend != null)
+                                    ProducerContainer.getInstance().sendMessage(toSend, toSend.getTopic());
                                 break;
                             case NotifyMessage: //Phase one, receive Notify messages.
                                 msg.setOffset(record.offset());

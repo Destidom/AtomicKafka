@@ -12,9 +12,9 @@ import java.util.Scanner;
    Typical message to send, remember to increase the MessageID
   {"messageID":3,"clientID":1,"messageType":"ClientMessage","value":"Hello Soup","topic":["T1"]}
   {"messageID":2,"clientID":1,"messageType":"ClientMessage","value":"Hello Soup","topic":["T1","T2","T3","T4"]}
-  {"messageID":1,"clientID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1","T2"]}
+  {"messageID":6,"clientID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1","T2"]}
 
-  {"messageID":1,"senderID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1"]}
+  {"messageID":7,"senderID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1"]}
   {"messageID":2893,"senderID":1,"messageType":"ClientMessage","value":"Hello","topic":["T1"],"offset":-999,"timeStamp":-999}
 
 */

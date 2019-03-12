@@ -77,7 +77,7 @@ public class AtomicMulticast implements Atomic {
             msg.setTimeStamp(logicalClock);
             logicalClock++;
             deliveryHeap.add(msg); // Delivery happens through deliveryHeap!
-            return msg;
+            return null;
         }
 
         // More than once receiver!
@@ -141,8 +141,12 @@ public class AtomicMulticast implements Atomic {
             storedMessage = msg;
 
             // TODO: Update deliveryheap here.
-            if(!this.deliveryHeap.contains(msg))
+            if(!this.deliveryHeap.contains(msg)) {
                 this.deliveryHeap.add(msg);
+            } else {
+                this.deliveryHeap.remove(msg);
+                this.deliveryHeap.add(msg);
+            }
         }
 
         // Only check if we reponses from ALL topics, dont waste resources.
@@ -254,10 +258,11 @@ public class AtomicMulticast implements Atomic {
     public List<KafkaMessage> checkDelivery() {
         List<KafkaMessage> list = new ArrayList<>();
         if (this.deliveryHeap.peek() != null) {
-            System.out.println(this.deliveryHeap);
+
             while (this.deliveryHeap.peek() != null &&
                     this.deliveryHeap.peek().getMessageType() == Type.Delivery)
             {
+                System.out.println(this.deliveryHeap.peek().toString() + " can be delivered!");
                 KafkaMessage msg = this.deliveryHeap.poll();
                 this.state.remove(msg.getMessageID());
                 list.add(msg);
