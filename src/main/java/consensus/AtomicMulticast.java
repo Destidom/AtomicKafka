@@ -25,6 +25,10 @@ public class AtomicMulticast implements Atomic {
 
     public static AtomicMulticast instance;
 
+    public PriorityQueue<KafkaMessage> getDeliveryHeap() {
+        return deliveryHeap;
+    }
+
     // Heap based queue
     private final PriorityQueue<KafkaMessage> deliveryHeap = new PriorityQueue<>(new TimestampAscending());
 
@@ -86,14 +90,15 @@ public class AtomicMulticast implements Atomic {
             state.put(msg.getMessageID(), list);
         } else {
             state.get(msg.getMessageID()).put(msg.getSenderID(), msg);
-            if(!this.deliveryHeap.contains(msg))
-                this.deliveryHeap.add(msg);
+
         }
+
+        if(!this.deliveryHeap.contains(msg))
+            this.deliveryHeap.add(msg);
 
         // Create response message.
         KafkaMessage cloned = cloneMessage(msg);
         cloned.setSenderID(ConsumerThread.CLIENT_ID); // Set ourselves as sender.
-
 
         if (msg.getMessageType() == Type.NotifyMessage) {
             // Respond to other nodes that we have gotten the message from client.
@@ -139,6 +144,8 @@ public class AtomicMulticast implements Atomic {
 
         // Only check if we reponses from ALL topics, dont waste resources.
         Set<Map.Entry<Integer, KafkaMessage>> messages = this.state.get(msg.getMessageID()).entrySet();
+        System.out.println("False: " + messages.size());
+        System.out.println(messages.toString());
         if(messages.size() == msg.getTopic().length) {
             System.out.println("All messages received, find if all is ack");
             boolean allAcks = true;
@@ -147,6 +154,7 @@ public class AtomicMulticast implements Atomic {
             for (Map.Entry<Integer, KafkaMessage> entry : messages) {
                 // A entry can be updated to decided if our queue is slow.
                 if (entry.getValue().getMessageType() != Type.AckMessage) {
+                    System.out.println("False: " + entry.getValue());
                     allAcks = false;
                     break;
                 } else {
@@ -162,7 +170,7 @@ public class AtomicMulticast implements Atomic {
                 deliveryHeap.remove(decidedMessage); // Remove to update TS. (This removes on messageID).
                 deliveryHeap.add(decidedMessage); // Readding to force placement update.
                 System.out.println(Arrays.toString(this.deliveryHeap.toArray()));
-
+                return decidedMessage;
             }
         }
 
@@ -201,15 +209,15 @@ public class AtomicMulticast implements Atomic {
     public List<KafkaMessage> checkDelivery() {
 
         List<KafkaMessage> list = new ArrayList<>();
-        if (this.deliveryHeap.peek() != null) {
-            while (this.deliveryHeap.peek() != null &&
-                    this.deliveryHeap.peek().getMessageType() == Type.Delivery)
-            {
-                KafkaMessage msg = this.deliveryHeap.poll();
-                this.state.remove(msg.getMessageID());
-                list.add(msg);
-            }
+        System.out.println(this.deliveryHeap.toString());
+        while (this.deliveryHeap.peek() != null &&
+                this.deliveryHeap.peek().getMessageType() == Type.Delivery)
+        {
+            KafkaMessage msg = this.deliveryHeap.poll();
+            this.state.remove(msg.getMessageID());
+            list.add(msg);
         }
+
         return list;
     }
 }

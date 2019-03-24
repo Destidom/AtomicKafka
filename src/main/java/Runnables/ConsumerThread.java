@@ -4,6 +4,7 @@ import Serializer.JsonEncoder;
 import consensus.AtomicMulticast;
 import constants.Constants;
 import model.KafkaMessage;
+import model.Type;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -90,42 +91,54 @@ public class ConsumerThread implements Runnable {
                     KafkaMessage msg = json.decode(record.value());
                     if (msg != null) { // set offset and timestamp for first time message.
                         KafkaMessage toSend = null;
+                        List<KafkaMessage> delivery = null;
                         switch (msg.getMessageType()) {
+
                             case ClientMessage: // Phase one, send out and receive notifications of msgs
                                 msg.setOffset(record.offset()); // Set offset for clientMessage since Phase I
                                 System.out.println("Got msg");
                                 toSend = consensus.phaseOne(msg);
+                                // TODO: fix this hack
+                                toSend.setSentFromTopic(this.topic.get(0));
                                 // Sending ack to ourselves.
                                 if (toSend != null)
                                     prod.sendMessage(toSend, toSend.getTopic());
                                 break;
+
                             case NotifyMessage: //Phase one, receive Notify messages.
                                 msg.setOffset(record.offset());
-                                System.out.println("Got notify");
                                 toSend = consensus.phaseOne(msg);
-
-                                // Will only send our own msg
-                                if (toSend != null)
-                                    prod.sendMessage(toSend, toSend.getTopic());
-
+                                System.out.println("Got notify");
+                                if (toSend != null) {
+                                    String toTopic = toSend.getSentFromTopic();
+                                    prod.sendMessage(toSend, toTopic );
+                                }
                                 break;
                             case AckMessage: // Phase 2, received all ACKS msgs decide on a message.
-                                consensus.phaseTwo(msg); // no return, ignore it.
-                                List<KafkaMessage> delivery = consensus.checkDelivery();
-
                                 System.out.println("Received ack");
+                                KafkaMessage sendingMsg = consensus.phaseTwo(msg); // no return, ignore it.
+                                if(sendingMsg != null) {
+                                    sendingMsg.setMessageType(Type.Decided);
+                                   System.out.println("aa " + sendingMsg);
+                                    prod.sendMessage(sendingMsg, sendingMsg.getTopic());
+                                }
+                                break;
+                            case Decided:
+                                System.out.println("Got Delivery");
+                                consensus.getDeliveryHeap().remove(msg);
+                                msg.setMessageType(Type.Delivery);
+                                consensus.getDeliveryHeap().add(msg);
+                                delivery = consensus.checkDelivery();
 
-                                // Deliver all deliverable messages.
+                                // TODO: Send Decided MSG to every topic.
                                 for(int i =0; i < delivery.size(); i++) {
-                                    System.out.println("There are deliverable messages!");
+                                    //System.out.println("There are deliverable messages!");
                                     prod.sendMessage(delivery.get(i), this.topic);
                                 }
                                 break;
-                            case Decided: // NOT IN USE!
+                            case Delivery: // NOT IN USE!
                                 break;
                             case UniqueAckMessage: // NOT IN USE
-                                break;
-                            case Delivery: // NOT IN USE
                                 break;
                             case NackMessage: // NOT IN USE!
                                 // (not needed for now)

@@ -8,6 +8,10 @@ public class KafkaMessage implements Serializable, Cloneable {
     private static final long serialVersionUID = 6024531281280351055L;
     private int messageID;
     private int senderID;
+
+
+
+    private String sentFromTopic;
     private Type messageType;
     private String value;
     private String[] topic;
@@ -83,6 +87,14 @@ public class KafkaMessage implements Serializable, Cloneable {
 
     public void setOffset(long offset) {
         this.offset = offset;
+    }
+
+    public String getSentFromTopic() {
+        return sentFromTopic;
+    }
+
+    public void setSentFromTopic(String sentFromTopic) {
+        this.sentFromTopic = sentFromTopic;
     }
 
     public long getTimeStamp() {
