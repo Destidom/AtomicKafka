@@ -87,77 +87,78 @@ public class ConsumerThread implements Runnable {
 
             //print each record.
             consumerRecords.forEach(record -> {
-                if (record.value() != null) {
-                    KafkaMessage msg = json.decode(record.value());
-                    if (msg != null) { // set offset and timestamp for first time message.
-                        KafkaMessage toSend = null;
-                        List<KafkaMessage> delivery = null;
-                        switch (msg.getMessageType()) {
-
-                            case ClientMessage: // Phase one, send out and receive notifications of msgs
-                                msg.setOffset(record.offset()); // Set offset for clientMessage since Phase I
-                                System.out.println("Got msg");
-                                toSend = consensus.phaseOne(msg);
-                                // TODO: fix this hack
-                                toSend.setSentFromTopic(this.topic.get(0));
-                                // Sending ack to ourselves.
-                                if (toSend != null)
-                                    prod.sendMessage(toSend, toSend.getTopic());
-                                break;
-
-                            case NotifyMessage: //Phase one, receive Notify messages.
-                                msg.setOffset(record.offset());
-                                toSend = consensus.phaseOne(msg);
-                                System.out.println("Got notify");
-                                if (toSend != null) {
-                                    String toTopic = toSend.getSentFromTopic();
-                                    prod.sendMessage(toSend, toTopic );
-                                }
-                                break;
-                            case AckMessage: // Phase 2, received all ACKS msgs decide on a message.
-                                System.out.println("Received ack");
-                                KafkaMessage sendingMsg = consensus.phaseTwo(msg); // no return, ignore it.
-                                if(sendingMsg != null) {
-                                    sendingMsg.setMessageType(Type.Decided);
-                                   System.out.println("aa " + sendingMsg);
-                                    prod.sendMessage(sendingMsg, sendingMsg.getTopic());
-                                }
-                                break;
-                            case Decided:
-                                System.out.println("Got Delivery");
-                                consensus.getDeliveryHeap().remove(msg);
-                                msg.setMessageType(Type.Delivery);
-                                consensus.getDeliveryHeap().add(msg);
-                                delivery = consensus.checkDelivery();
-
-                                // TODO: Send Decided MSG to every topic.
-                                for(int i =0; i < delivery.size(); i++) {
-                                    //System.out.println("There are deliverable messages!");
-                                    prod.sendMessage(delivery.get(i), this.topic);
-                                }
-                                break;
-                            case Delivery: // NOT IN USE!
-                                break;
-                            case UniqueAckMessage: // NOT IN USE
-                                break;
-                            case NackMessage: // NOT IN USE!
-                                // (not needed for now)
-                                break;
-                            case DupMessage: // Already got this message (used if a Node tries to take responsibility over another topic)
-                                // (not needed for now)
-                                break;
-                            default:
-                                System.out.println("Something wrong happened in ConsumerThread Switch");
-
-                        }
-                    } else {
-                        System.out.println("Decoded msg is null ");
-                    }
-                } else {
+                if (record.value() == null) {
                     System.out.println("No message in value");
+                    return;
+                }
+                KafkaMessage msg = json.decode(record.value());
+
+                if (msg == null) {
+                    System.out.println("No message in value");
+                    return;
+                }
+                // set offset and timestamp for first time message.
+                    KafkaMessage toSend = null;
+                    List<KafkaMessage> delivery = null;
+                switch (msg.getMessageType()) {
+
+                    case ClientMessage: // Phase one, send out and receive notifications of msgs
+                        msg.setOffset(record.offset()); // Set offset for clientMessage since Phase I
+                        System.out.println("Got msg");
+                        toSend = consensus.phaseOne(msg);
+                        toSend.setSentFromTopic(this.topic.get(0));
+
+                        // Sending ack to ourselves.
+                        if (toSend != null)
+                            prod.sendMessage(toSend, toSend.getTopic());
+                        break;
+
+                    case NotifyMessage: //Phase one, receive Notify messages.
+                        msg.setOffset(record.offset());
+                        toSend = consensus.phaseOne(msg);
+                        System.out.println("Got notify");
+                        if (toSend != null) {
+                            String toTopic = toSend.getSentFromTopic();
+                            prod.sendMessage(toSend, toTopic );
+                        }
+                        break;
+                    case AckMessage: // Phase 2, received all ACKS msgs decide on a message.
+                        System.out.println("Received ack");
+                        KafkaMessage sendingMsg = consensus.phaseTwo(msg); // no return, ignore it.
+                        if(sendingMsg != null) {
+                            sendingMsg.setMessageType(Type.Decided);
+                           System.out.println("aa " + sendingMsg);
+                            prod.sendMessage(sendingMsg, sendingMsg.getTopic());
+                        }
+                        break;
+                    case Decided:
+                        System.out.println("Got Delivery");
+                        consensus.getDeliveryHeap().remove(msg);
+                        msg.setMessageType(Type.Delivery);
+                        consensus.getDeliveryHeap().add(msg);
+                        delivery = consensus.checkDelivery();
+
+                        // TODO: Send Decided MSG to every topic.
+                        for(int i =0; i < delivery.size(); i++) {
+                            //System.out.println("There are deliverable messages!");
+                            prod.sendMessage(delivery.get(i), this.topic);
+                        }
+                        break;
+                    case Delivery: // NOT IN USE!
+                        break;
+                    case UniqueAckMessage: // NOT IN USE
+                        break;
+                    case NackMessage: // NOT IN USE!
+                        // (not needed for now)
+                        break;
+                    case DupMessage: // Already got this message (used if a Node tries to take responsibility over another topic)
+                        // (not needed for now)
+                        break;
+                    default:
+                        System.out.println("Something wrong happened in ConsumerThread Switch");
+
                 }
             });
-
 
             // commits the offset of record to broker.
             consumer.commitAsync();

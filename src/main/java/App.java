@@ -1,6 +1,7 @@
 import Runnables.ConsumerThread;
 import Runnables.ProducerContainer;
 import Serializer.JsonEncoder;
+import Utils.CrashRecover;
 import com.beust.jcommander.JCommander;
 import constants.Args;
 import model.KafkaMessage;
@@ -55,7 +56,7 @@ public class App {
         final ProducerContainer producer = new ProducerContainer(args.ID, args.TransactionID);
 
         // Create a consumer that listens to incoming messages on a topic.
-        ConsumerThread cThread = new ConsumerThread(producer, args.Topic, args.GroupID, args.ID);
+        CrashRecover cThread = new CrashRecover(args.Topic, args.GroupID, args.ID);
         Thread t = new Thread(cThread);
         t.setName(args.Topic);
         t.start();

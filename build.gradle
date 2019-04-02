@@ -6,6 +6,17 @@ apply plugin: 'java'
 
 sourceCompatibility = 1.8
 
+idea {
+
+    module {
+
+        downloadJavadoc = true
+
+    }
+
+}
+
+
 repositories {
     mavenCentral()
 }

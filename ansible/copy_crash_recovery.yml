@@ -1,0 +1,10 @@
+---
+
+- hosts: badne
+  remote_user: frtvedt
+  tasks:
+    - name: Copying AtomicKafka over
+      copy:
+        src: /home/ferdinand/source/AtomicKafkaGradle/out/artifacts/0_jar/0.jar
+        dest: ~/crashrecovery.jar
+

@@ -2,7 +2,7 @@ package constants;
 
 // TODO: Why did I make this as a interface???
 public interface Constants {
-    String KAFKA_BROKERS = "pitter11.ux.uis.no:9000";
+    String KAFKA_BROKERS = "pitter23.ux.uis.no:9000";
     Integer MESSAGE_COUNT = 1;
     String CLIENT_ID = "1";
     String GROUP_ID_CONFIG = "1";
