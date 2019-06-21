@@ -1,0 +1,107 @@
+---
+- hosts: badne
+  remote_user: frtvedt
+
+  tasks:
+  - name: test connection
+    ping:
+  - name: copying to
+    synchronize: 
+      dest: ./data
+      src:  /home/stud/frtvedt/project/data/
+      mode: pull
+  - name: remove data folder
+    file:
+      path: /home/stud/frtvedt/project/data/
+      state: absent 
+    tags:
+        - cleanup
+  - name: recreate data folder
+    file:
+      path: /home/stud/frtvedt/project/data/
+      state: directory
+      mode:   0755
+    tags:
+        - cleanup
+  - name: recreate eval folder
+    file:
+      path: /home/stud/frtvedt/project/data/eval/
+      state: directory
+      mode:   0755
+    tags:
+      - cleanup
+  - name: recreate data folder
+    file:
+      path: /home/stud/frtvedt/project/data/eval/T1/
+      state: directory
+      mode:   0755
+    tags:
+      - cleanup
+  - name: recreate data folder
+    file:
+      path: /home/stud/frtvedt/project/data/eval/T2/
+      state: directory
+      mode:   0755
+    tags:
+      - cleanup
+  - name: recreate data folder
+    file:
+      path: /home/stud/frtvedt/project/data/eval/T3/
+      state: directory
+      mode:   0755
+    tags:
+      - cleanup
+  - name: recreate data folder
+    file:
+      path: /home/stud/frtvedt/project/data/eval/T4/
+      state: directory
+      mode:   0755
+    tags:
+      - cleanup
+  - name: recreate data folder
+    file:
+      path: /home/stud/frtvedt/project/data/eval/T5/
+      state: directory
+      mode:   0755
+    tags:
+      - cleanup
+  - name: recreate data folder
+    file:
+      path: /home/stud/frtvedt/project/data/T1/
+      state: directory
+      mode:   0755
+    tags:
+      - cleanup
+
+  - name: recreate data folder
+    file:
+      path: /home/stud/frtvedt/project/data/T2/
+      state: directory
+      mode:   0755
+    tags:
+      - cleanup
+
+
+  - name: recreate data folder
+    file:
+      path: /home/stud/frtvedt/project/data/T3/
+      state: directory
+      mode:   0755
+    tags:
+      - cleanup
+
+  - name: recreate data folder
+    file:
+      path: /home/stud/frtvedt/project/data/T4/
+      state: directory
+      mode:   0755
+    tags:
+      - cleanup
+
+  - name: recreate data folder
+    file:
+      path: /home/stud/frtvedt/project/data/T5/
+      state: directory
+      mode:   0755
+    tags:
+      - cleanup

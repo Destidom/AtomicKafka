@@ -1,0 +1,82 @@
+- name: Startup
+  hosts: raft-servers
+  remote_user: ljehl
+  gather_facts: false
+  ignore_errors: yes
+  tags:
+    - run
+    - server
+  vars:
+    backend: gorums
+    quiet: true
+    servers: "{{groups['raft-servers']|map('regex_replace', '^(.*)$', '\\1:9201' )|join(',')}}"
+    cluster: "{{(range(1,999)|list)[:groups['raft-servers']|length]|join(',')}}"
+
+  tasks:
+    - name: Remove old server data
+      shell: rm -rf /local/scratch/ljehl/tmp/*
+
+    - name: Start servers 1-4
+      shell: cd /local/scratch/ljehl/tmp/;  nohup ../bin/rkvd -ordergorums="{{order}}" -heartbeat 2ms -id "{{raftID}}" -servers "{{servers}}" -cluster "{{cluster}}" -backend "{{backend}}" -entriespermsg "{{maxentries}}" -quiet="{{quiet}}" -maxaebuffer="{{maxaebuffer}}" -memoryonly </dev/null >/dev/null  2>&1 &
+      when: raftID != 5
+
+    - name: Start server 5
+      shell: cd /local/scratch/ljehl/tmp/;  nohup ../bin/rkvd -ordergorums="{{order}}" -heartbeat 2ms -election 50s -id "{{raftID}}" -servers "{{servers}}" -cluster "{{cluster}}" -backend "{{backend}}" -entriespermsg "{{maxentries}}" -quiet="{{quiet}}" -maxaebuffer="{{maxaebuffer}}" -memoryonly </dev/null >/dev/null  2>&1 &
+      when: raftID == 5
+
+    - name: Sleep
+      shell: sleep 2s
+
+- name: Client
+  hosts: raft-clients
+  remote_user: ljehl
+  gather_facts: false
+  ignore_errors: yes
+  tags:
+    - client
+    - run
+  vars:
+    servers: "{{groups['raft-servers']|map('regex_replace', '^(.*)$', '\\1:9201' )|join(',')}}"
+    throughput: 50
+    clients: 150
+    time: 60s
+    payload: 16
+
+  tasks:
+    - name: Remove old client data
+      shell: rm -rf /local/scratch/ljehl/tmp/*
+
+    - name: Throughput
+      shell: cd /local/scratch/ljehl/tmp/; ../bin/rkvctl -cluster "{{servers}}" -throughput "{{throughput|int}}" -syncronous="{{syncronous}}"  -clients "{{clients|int}}" -time "{{time}}" -payload "{{payload}}" -usemetrics=false >/dev/null 
+      async: 180
+      poll: 5
+
+    - name: Move client data
+      shell: mv /local/scratch/ljehl/tmp/latency*.csv /local/scratch/ljehl/data/latency_Cl{{raftCl}}_{{order}}_s{{syncronous}}_{{backend}}_m{{maxentries}}_c{{clients}}_t{{throughput}}_{{time}}_aebuffer{{maxaebuffer}}_{{output}}.csv
+    
+    - name: Move logs
+      shell: mv /local/scratch/ljehl/tmp/cl_output.txt /local/scratch/ljehl/data/cl_output{{raftCl}}_{{output}}.txt
+
+- name: Cleanup
+  hosts: raft-servers
+  remote_user: ec2-user
+  gather_facts: false
+  ignore_errors: yes
+  tags:
+    - cleanup
+    - server
+  
+  tasks:
+    - name: Stop servers
+      shell: killall -s INT rkvd
+
+    - name: Move latency data
+      shell: mv /local/scratch/ljehl/tmp/latency*.csv /local/scratch/ljehl/data/latency_{{raftID}}_{{order}}_{{backend}}_m{{maxentries}}_c{{clients}}_t{{throughput}}_{{time}}_aebuffer{{maxaebuffer}}_{{output}}.csv
+
+    - name: Move event data
+      shell: mv /local/scratch/ljehl/tmp/event*.csv /local/scratch/ljehl/data/event_{{raftID}}_{{order}}_{{backend}}_m{{maxentries}}_c{{clients}}_t{{throughput}}_{{time}}_aebuffer{{maxaebuffer}}_{{output}}.csv
+
+    - name: Move output
+      shell: mv /local/scratch/ljehl/tmp/output.txt /local/scratch/ljehl/data/output{{raftID}}_{{output}}.txt
+
+      

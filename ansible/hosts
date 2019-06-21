@@ -1,0 +1,20 @@
+[local]
+localhost ansible_connection=local
+
+[badne]
+badne5
+
+[pitters]
+pitter29
+pitter11
+pitter22
+
+
+[zookeeper]
+pitter12
+
+
+[atomic]
+pitter1
+pitter2
+pitter3

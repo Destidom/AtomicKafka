@@ -1,0 +1,26 @@
+group '0'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile("io.dropwizard.metrics:metrics-jmx:4.1.0")
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile group: 'org.apache.kafka', name: 'kafka_2.12', version: '2.0.0'
+    compile group: 'org.apache.kafka', name: 'kafka-clients', version: '2.0.0'
+    compile group: 'org.xerial.snappy', name: 'snappy-java', version: '1.1.7.1'
+    compile group: 'com.google.code.gson', name: 'gson', version: '2.8.5'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.1'
+    testCompile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
+    compile group: 'com.beust', name: 'jcommander', version: '1.72'
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.0'
+
+
+}
