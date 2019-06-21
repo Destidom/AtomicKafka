@@ -1,0 +1,18 @@
+---
+- hosts: pitters
+  remote_user: frtvedt 
+  tasks:
+  - name: test connection
+    ping:
+  - name: Stop servers
+    shell: kill -9 `~/java8/jdk1.8.0_181/bin/jps | grep "Kafka" | cut -d " " -f 1`
+
+- hosts: zookeeper
+  remote_user: frtvedt 
+  tasks:
+  - name: Stop servers
+    shell: kill -9 `~/java8/jdk1.8.0_181/bin/jps | grep "Quorum" | cut -d " " -f 1`
+      
+
+
+
