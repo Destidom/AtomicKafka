@@ -1,0 +1,21 @@
+---
+
+- hosts: zookeeper
+  remote_user: frtvedt 
+  tasks:
+  - name: test connection
+    ping:
+  - name: Start zookeeper
+    shell: cd /home/stud/frtvedt/kafka/kafka_2.11-2.0.0;  nohup ./bin/zookeeper-server-start.sh config/zookeeper.properties 2>&1 &
+      
+
+- hosts: pitters
+  remote_user: frtvedt 
+  tasks:
+  - name: test connection
+    ping:
+  - name: Start server
+    shell: cd /home/stud/frtvedt/kafka/kafka_2.11-2.0.0;  nohup ./bin/kafka-server-start.sh config/server-{{ item }}.properties 2>&1 &
+    with_sequence: start=1 end=3
+
+

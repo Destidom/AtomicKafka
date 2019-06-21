@@ -1,0 +1,12 @@
+---
+
+- hosts: badne
+  remote_user: frtvedt
+  tasks:
+  - name: ping
+    ping: 
+  - name: Copying AtomicKafka over
+    copy:
+      src: /home/ferdinand/source/AtomicKafkaGradle/out/artifacts/0_jar/0.jar
+      dest: ~/0.jar
+

@@ -1,0 +1,25 @@
+---
+- hosts: pitters_test1
+  remote_user: frtvedt
+  tasks:
+    - name: test connection
+      ping:
+
+- hosts: pitters_test2
+  remote_user: frtvedt
+  tasks:
+    - name: test connection
+      ping:
+
+- hosts: pitters_test3
+  remote_user: frtvedt
+  tasks:
+    - name: test connection
+      ping:
+
+- hosts: pitters_test4
+  remote_user: frtvedt
+  tasks:
+    - name: test connection
+      ping:
+
